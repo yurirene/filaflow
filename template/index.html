@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClinicaFila — Sistema de Senhas</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- ===================== NAVEGAÇÃO PRINCIPAL ===================== -->
+<nav class="main-nav" id="mainNav">
+  <div class="nav-brand">
+    <span class="nav-logo">⚕</span>
+    <span class="nav-title">ClinicaFila</span>
+    <span class="nav-tenant" id="tenantName">Clínica São Lucas</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-btn active" data-view="totem" onclick="showView('totem')">
+      <span class="nav-icon">🎫</span> Totem
+    </button>
+    <button class="nav-btn" data-view="painel" onclick="showView('painel')">
+      <span class="nav-icon">📺</span> Painel TV
+    </button>
+    <button class="nav-btn" data-view="operador" onclick="showView('operador')">
+      <span class="nav-icon">🖥</span> Operador
+    </button>
+    <button class="nav-btn" data-view="admin" onclick="showView('admin')">
+      <span class="nav-icon">⚙</span> Admin
+    </button>
+  </div>
+  <div class="nav-status">
+    <span class="status-dot active"></span>
+    <span class="status-text">Online</span>
+    <span class="nav-clock" id="navClock">--:--</span>
+  </div>
+</nav>
+
+<!-- ===================== VIEW: TOTEM ===================== -->
+<div class="view active" id="view-totem">
+  <div class="totem-container">
+
+    <!-- Tela inicial do totem -->
+    <div class="totem-screen" id="totemHome">
+      <div class="totem-header">
+        <div class="totem-logo">⚕</div>
+        <h1 class="totem-clinic-name" id="totemClinicName">Clínica São Lucas</h1>
+        <p class="totem-subtitle">Bem-vindo! Selecione o tipo de atendimento</p>
+      </div>
+
+      <div class="totem-priority-bar">
+        <button class="priority-btn" onclick="setPriority('idoso')">
+          <span class="priority-icon">👴</span>
+          <span>Idoso (60+)</span>
+        </button>
+        <button class="priority-btn" onclick="setPriority('pcd')">
+          <span class="priority-icon">♿</span>
+          <span>PCD</span>
+        </button>
+        <button class="priority-btn" onclick="setPriority('gestante')">
+          <span class="priority-icon">🤰</span>
+          <span>Gestante</span>
+        </button>
+        <button class="priority-btn" onclick="setPriority('normal')">
+          <span class="priority-icon">👤</span>
+          <span>Atendimento Geral</span>
+        </button>
+      </div>
+
+      <div class="totem-services" id="totemServices">
+        <!-- Gerado via JS -->
+      </div>
+
+      <div class="totem-footer">
+        <div class="totem-wait-info" id="totemWaitInfo">
+          <span class="wait-icon">⏱</span>
+          <span id="totemWaitText">Selecione um serviço para ver o tempo estimado</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tela de confirmação / senha gerada -->
+    <div class="totem-screen hidden" id="totemConfirm">
+      <div class="ticket-card">
+        <div class="ticket-header">
+          <span class="ticket-clinic" id="ticketClinic">Clínica São Lucas</span>
+          <span class="ticket-date" id="ticketDate"></span>
+        </div>
+        <div class="ticket-body">
+          <div class="ticket-priority-badge" id="ticketPriorityBadge"></div>
+          <div class="ticket-number" id="ticketNumber">A001</div>
+          <div class="ticket-service" id="ticketService">Triagem</div>
+          <div class="ticket-wait">
+            <span class="ticket-wait-label">Espera estimada</span>
+            <span class="ticket-wait-value" id="ticketWait">~8 min</span>
+          </div>
+          <div class="ticket-position">
+            <span class="ticket-pos-label">Posição na fila</span>
+            <span class="ticket-pos-value" id="ticketPosition">3ª</span>
+          </div>
+        </div>
+        <div class="ticket-footer">
+          <p class="ticket-msg">Aguarde ser chamado no painel</p>
+          <p class="ticket-sms" id="ticketSmsMsg"></p>
+        </div>
+        <div class="ticket-actions">
+          <button class="btn-primary" onclick="printTicket()">🖨 Imprimir Senha</button>
+          <button class="btn-secondary" onclick="resetTotem()">← Voltar ao Início</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== VIEW: PAINEL TV ===================== -->
+<div class="view hidden" id="view-painel">
+  <div class="painel-container" id="painelContainer">
+
+    <div class="painel-header">
+      <div class="painel-brand">
+        <span class="painel-logo">⚕</span>
+        <span class="painel-clinic" id="painelClinicName">Clínica São Lucas</span>
+      </div>
+      <div class="painel-clock-area">
+        <div class="painel-clock" id="painelClock">--:--:--</div>
+        <div class="painel-date" id="painelDate">--/--/----</div>
+      </div>
+      <div class="painel-selector">
+        <label>Ala:</label>
+        <select id="painelAlaSelect" onchange="changePainelAla(this.value)">
+          <option value="all">Todas as Alas</option>
+          <option value="triagem">Triagem</option>
+          <option value="coleta">Coleta</option>
+          <option value="raio-x">Raio-X</option>
+          <option value="caixa">Caixa</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="painel-main">
+      <!-- Senha em destaque -->
+      <div class="painel-current">
+        <div class="painel-current-label">CHAMANDO AGORA</div>
+        <div class="painel-current-number" id="painelCurrentNumber">---</div>
+        <div class="painel-current-service" id="painelCurrentService">Aguardando...</div>
+        <div class="painel-current-guiche">
+          <span class="guiche-label">GUICHÊ</span>
+          <span class="guiche-number" id="painelCurrentGuiche">--</span>
+        </div>
+        <div class="painel-alert-ring" id="painelAlertRing"></div>
+      </div>
+
+      <!-- Histórico de chamadas -->
+      <div class="painel-history">
+        <div class="painel-history-title">ÚLTIMAS CHAMADAS</div>
+        <div class="painel-history-list" id="painelHistoryList">
+          <!-- Gerado via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Fila por serviço -->
+    <div class="painel-queues">
+      <div class="painel-queue-card" id="queueCardTriagem">
+        <div class="queue-card-title">Triagem</div>
+        <div class="queue-card-count" id="queueCountTriagem">0</div>
+        <div class="queue-card-label">na fila</div>
+        <div class="queue-card-wait" id="queueWaitTriagem">~0 min</div>
+      </div>
+      <div class="painel-queue-card" id="queueCardColeta">
+        <div class="queue-card-title">Coleta</div>
+        <div class="queue-card-count" id="queueCountColeta">0</div>
+        <div class="queue-card-label">na fila</div>
+        <div class="queue-card-wait" id="queueWaitColeta">~0 min</div>
+      </div>
+      <div class="painel-queue-card" id="queueCardRaioX">
+        <div class="queue-card-title">Raio-X</div>
+        <div class="queue-card-count" id="queueCountRaioX">0</div>
+        <div class="queue-card-label">na fila</div>
+        <div class="queue-card-wait" id="queueWaitRaioX">~0 min</div>
+      </div>
+      <div class="painel-queue-card" id="queueCardCaixa">
+        <div class="queue-card-title">Caixa</div>
+        <div class="queue-card-count" id="queueCountCaixa">0</div>
+        <div class="queue-card-label">na fila</div>
+        <div class="queue-card-wait" id="queueWaitCaixa">~0 min</div>
+      </div>
+    </div>
+
+    <!-- Ticker informativo -->
+    <div class="painel-ticker">
+      <div class="ticker-content" id="tickerContent">
+        Bem-vindo à Clínica São Lucas &nbsp;•&nbsp; Horário de atendimento: 07h às 19h &nbsp;•&nbsp; Traga seus documentos e exames anteriores &nbsp;•&nbsp; Respeite a ordem de chamada &nbsp;•&nbsp;
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== VIEW: OPERADOR ===================== -->
+<div class="view hidden" id="view-operador">
+  <div class="operador-container">
+
+    <div class="operador-sidebar">
+      <div class="op-profile">
+        <div class="op-avatar">AT</div>
+        <div class="op-info">
+          <div class="op-name" id="opName">Ana Tereza</div>
+          <div class="op-guiche">Guichê <span id="opGuicheNum">03</span></div>
+          <div class="op-service" id="opServiceName">Triagem</div>
+        </div>
+      </div>
+
+      <div class="op-stats">
+        <div class="op-stat-item">
+          <span class="op-stat-value" id="opStatAtendidos">0</span>
+          <span class="op-stat-label">Atendidos hoje</span>
+        </div>
+        <div class="op-stat-item">
+          <span class="op-stat-value" id="opStatTMedio">--</span>
+          <span class="op-stat-label">Tempo médio</span>
+        </div>
+        <div class="op-stat-item">
+          <span class="op-stat-value" id="opStatFila">0</span>
+          <span class="op-stat-label">Na fila</span>
+        </div>
+      </div>
+
+      <div class="op-guiche-selector">
+        <label class="op-label">Meu Guichê</label>
+        <select id="opGuicheSelect" onchange="changeOpGuiche(this.value)">
+          <option value="1">Guichê 01</option>
+          <option value="2">Guichê 02</option>
+          <option value="3" selected>Guichê 03</option>
+          <option value="4">Guichê 04</option>
+          <option value="5">Guichê 05</option>
+        </select>
+      </div>
+
+      <div class="op-service-selector">
+        <label class="op-label">Serviço</label>
+        <select id="opServiceSelect" onchange="changeOpService(this.value)">
+          <option value="triagem">Triagem</option>
+          <option value="coleta">Coleta</option>
+          <option value="raio-x">Raio-X</option>
+          <option value="caixa">Caixa</option>
+        </select>
+      </div>
+
+      <div class="op-intercalacao">
+        <label class="op-label">Intercalação ativa</label>
+        <div class="intercalacao-badge" id="intercalacaoBadge">2 Normal : 1 Preferencial</div>
+      </div>
+    </div>
+
+    <div class="operador-main">
+
+      <!-- Senha atual em atendimento -->
+      <div class="op-current-card">
+        <div class="op-current-label">EM ATENDIMENTO</div>
+        <div class="op-current-number" id="opCurrentNumber">---</div>
+        <div class="op-current-meta">
+          <span class="op-current-service" id="opCurrentService">—</span>
+          <span class="op-current-priority" id="opCurrentPriority"></span>
+        </div>
+        <div class="op-current-timer">
+          <span class="timer-icon">⏱</span>
+          <span class="timer-value" id="opTimer">00:00</span>
+        </div>
+        <div class="op-actions">
+          <button class="op-btn op-btn-call" id="btnChamar" onclick="chamarProxima()">
+            <span>📢</span> Chamar Próxima
+          </button>
+          <button class="op-btn op-btn-recall" onclick="rechamarAtual()" id="btnRechamar" disabled>
+            <span>🔁</span> Rechamar
+          </button>
+          <button class="op-btn op-btn-transfer" onclick="openTransferModal()" id="btnTransferir" disabled>
+            <span>↗</span> Transferir
+          </button>
+          <button class="op-btn op-btn-finish" onclick="finalizarAtendimento()" id="btnFinalizar" disabled>
+            <span>✓</span> Finalizar
+          </button>
+          <button class="op-btn op-btn-absent" onclick="marcarAusente()" id="btnAusente" disabled>
+            <span>✗</span> Ausente
+          </button>
+        </div>
+      </div>
+
+      <!-- Fila de espera -->
+      <div class="op-queue-section">
+        <div class="op-queue-header">
+          <h3>Fila de Espera</h3>
+          <div class="op-queue-filters">
+            <button class="filter-btn active" onclick="filterQueue('all', this)">Todos</button>
+            <button class="filter-btn" onclick="filterQueue('preferencial', this)">Preferencial</button>
+            <button class="filter-btn" onclick="filterQueue('normal', this)">Normal</button>
+            <button class="filter-btn" onclick="filterQueue('agendado', this)">Agendado</button>
+          </div>
+        </div>
+        <div class="op-queue-list" id="opQueueList">
+          <!-- Gerado via JS -->
+        </div>
+      </div>
+
+      <!-- Agendamentos do dia -->
+      <div class="op-schedule-section">
+        <div class="op-schedule-header">
+          <h3>Agendamentos de Hoje</h3>
+          <button class="btn-small" onclick="addAgendamentoFila()">+ Adicionar à Fila</button>
+        </div>
+        <div class="op-schedule-list" id="opScheduleList">
+          <!-- Gerado via JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Log de chamadas -->
+    <div class="operador-log">
+      <div class="op-log-header">
+        <h4>Histórico do Turno</h4>
+        <button class="btn-tiny" onclick="clearLog()">Limpar</button>
+      </div>
+      <div class="op-log-list" id="opLogList">
+        <!-- Gerado via JS -->
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== VIEW: ADMIN ===================== -->
+<div class="view hidden" id="view-admin">
+  <div class="admin-container">
+
+    <div class="admin-sidebar">
+      <div class="admin-menu">
+        <button class="admin-menu-btn active" onclick="showAdminTab('dashboard')">📊 Dashboard</button>
+        <button class="admin-menu-btn" onclick="showAdminTab('relatorios')">📈 Relatórios</button>
+        <button class="admin-menu-btn" onclick="showAdminTab('servicos')">🏥 Serviços</button>
+        <button class="admin-menu-btn" onclick="showAdminTab('guiches')">🖥 Guichês</button>
+        <button class="admin-menu-btn" onclick="showAdminTab('intercalacao')">⚖ Intercalação</button>
+        <button class="admin-menu-btn" onclick="showAdminTab('notificacoes')">📱 Notificações</button>
+        <button class="admin-menu-btn" onclick="showAdminTab('configuracoes')">⚙ Configurações</button>
+      </div>
+    </div>
+
+    <div class="admin-content">
+
+      <!-- Tab: Dashboard -->
+      <div class="admin-tab active" id="adminTab-dashboard">
+        <h2 class="admin-title">Dashboard em Tempo Real</h2>
+        <div class="dashboard-kpis">
+          <div class="kpi-card kpi-blue">
+            <div class="kpi-value" id="kpiTotalHoje">0</div>
+            <div class="kpi-label">Atendimentos Hoje</div>
+            <div class="kpi-trend" id="kpiTotalTrend">+0%</div>
+          </div>
+          <div class="kpi-card kpi-green">
+            <div class="kpi-value" id="kpiTMedio">0 min</div>
+            <div class="kpi-label">Tempo Médio</div>
+            <div class="kpi-trend" id="kpiTMedioTrend">—</div>
+          </div>
+          <div class="kpi-card kpi-orange">
+            <div class="kpi-value" id="kpiEmEspera">0</div>
+            <div class="kpi-label">Em Espera Agora</div>
+            <div class="kpi-trend" id="kpiEmEsperaTrend">—</div>
+          </div>
+          <div class="kpi-card kpi-purple">
+            <div class="kpi-value" id="kpiAusentes">0</div>
+            <div class="kpi-label">Ausentes</div>
+            <div class="kpi-trend" id="kpiAusentesTrend">—</div>
+          </div>
+          <div class="kpi-card kpi-red">
+            <div class="kpi-value" id="kpiPico">--:--</div>
+            <div class="kpi-label">Horário de Pico</div>
+            <div class="kpi-trend" id="kpiPicoTrend">—</div>
+          </div>
+          <div class="kpi-card kpi-teal">
+            <div class="kpi-value" id="kpiGuichesAtivos">0</div>
+            <div class="kpi-label">Guichês Ativos</div>
+            <div class="kpi-trend" id="kpiGuichesActiveTrend">—</div>
+          </div>
+        </div>
+
+        <div class="dashboard-charts">
+          <div class="chart-card">
+            <h3>Atendimentos por Hora</h3>
+            <canvas id="chartHora" width="500" height="200"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Distribuição por Serviço</h3>
+            <canvas id="chartServico" width="300" height="200"></canvas>
+          </div>
+        </div>
+
+        <div class="dashboard-operators">
+          <h3>Produtividade por Operador</h3>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Operador</th>
+                <th>Guichê</th>
+                <th>Serviço</th>
+                <th>Atendidos</th>
+                <th>T. Médio</th>
+                <th>Ausentes</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="operatorTableBody">
+              <!-- Gerado via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: Relatórios -->
+      <div class="admin-tab hidden" id="adminTab-relatorios">
+        <h2 class="admin-title">Relatórios</h2>
+        <div class="relatorio-filters">
+          <div class="filter-group">
+            <label>Período</label>
+            <select id="relPeriodo">
+              <option value="hoje">Hoje</option>
+              <option value="semana">Esta Semana</option>
+              <option value="mes">Este Mês</option>
+              <option value="custom">Personalizado</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Serviço</label>
+            <select id="relServico">
+              <option value="all">Todos</option>
+              <option value="triagem">Triagem</option>
+              <option value="coleta">Coleta</option>
+              <option value="raio-x">Raio-X</option>
+              <option value="caixa">Caixa</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Operador</label>
+            <select id="relOperador">
+              <option value="all">Todos</option>
+            </select>
+          </div>
+          <button class="btn-primary" onclick="gerarRelatorio()">Gerar Relatório</button>
+          <button class="btn-secondary" onclick="exportarRelatorio()">⬇ Exportar CSV</button>
+        </div>
+
+        <div class="relatorio-result" id="relatorioResult">
+          <div class="relatorio-empty">Selecione os filtros e clique em "Gerar Relatório"</div>
+        </div>
+      </div>
+
+      <!-- Tab: Serviços -->
+      <div class="admin-tab hidden" id="adminTab-servicos">
+        <h2 class="admin-title">Gerenciar Serviços</h2>
+        <button class="btn-primary mb-2" onclick="openServiceModal()">+ Novo Serviço</button>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Prefixo</th>
+              <th>Ala</th>
+              <th>T. Médio (min)</th>
+              <th>Ativo</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="servicosTableBody">
+            <!-- Gerado via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tab: Guichês -->
+      <div class="admin-tab hidden" id="adminTab-guiches">
+        <h2 class="admin-title">Gerenciar Guichês</h2>
+        <button class="btn-primary mb-2" onclick="openGuicheModal()">+ Novo Guichê</button>
+        <div class="guiches-grid" id="guichesGrid">
+          <!-- Gerado via JS -->
+        </div>
+      </div>
+
+      <!-- Tab: Intercalação -->
+      <div class="admin-tab hidden" id="adminTab-intercalacao">
+        <h2 class="admin-title">Regras de Intercalação</h2>
+        <div class="intercalacao-info">
+          <p>Configure a proporção entre atendimentos normais e preferenciais (Lei 10.741 — Estatuto do Idoso, PCD, Gestantes).</p>
+        </div>
+        <div class="intercalacao-form">
+          <div class="form-group">
+            <label>Serviço</label>
+            <select id="intServico">
+              <option value="all">Todos os Serviços</option>
+              <option value="triagem">Triagem</option>
+              <option value="coleta">Coleta</option>
+              <option value="raio-x">Raio-X</option>
+              <option value="caixa">Caixa</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Normais por Preferencial</label>
+            <input type="number" id="intNormais" value="2" min="1" max="10" />
+          </div>
+          <div class="form-group">
+            <label>Preferenciais por ciclo</label>
+            <input type="number" id="intPreferenciais" value="1" min="1" max="5" />
+          </div>
+          <button class="btn-primary" onclick="salvarIntercalacao()">Salvar Regra</button>
+        </div>
+        <div class="intercalacao-preview" id="intercalacaoPreview">
+          <!-- Gerado via JS -->
+        </div>
+        <table class="admin-table mt-2">
+          <thead>
+            <tr><th>Serviço</th><th>Regra</th><th>Ativo</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="intercalacaoTableBody">
+            <!-- Gerado via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tab: Notificações -->
+      <div class="admin-tab hidden" id="adminTab-notificacoes">
+        <h2 class="admin-title">Configuração de Notificações</h2>
+        <div class="notif-cards">
+          <div class="notif-card">
+            <div class="notif-card-header">
+              <span class="notif-icon">💬</span>
+              <h3>WhatsApp</h3>
+              <label class="toggle">
+                <input type="checkbox" id="toggleWhatsapp" onchange="toggleNotif('whatsapp', this.checked)" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="notif-card-body">
+              <div class="form-group">
+                <label>Provedor</label>
+                <select id="whatsappProvider">
+                  <option value="z-api">Z-API</option>
+                  <option value="twilio">Twilio</option>
+                  <option value="evolution">Evolution API</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>API Key / Token</label>
+                <input type="password" id="whatsappToken" placeholder="••••••••••••" />
+              </div>
+              <div class="form-group">
+                <label>Avisar quando restar X senhas</label>
+                <input type="number" id="whatsappAntecedencia" value="3" min="1" max="10" />
+              </div>
+              <div class="form-group">
+                <label>Mensagem personalizada</label>
+                <textarea id="whatsappMsg" rows="3">Olá {nome}! Sua senha {senha} está quase sendo chamada na {clinica}. Por favor, dirija-se ao guichê em breve.</textarea>
+              </div>
+              <button class="btn-primary" onclick="salvarNotifWhatsapp()">Salvar</button>
+              <button class="btn-secondary" onclick="testarNotif('whatsapp')">Testar</button>
+            </div>
+          </div>
+
+          <div class="notif-card">
+            <div class="notif-card-header">
+              <span class="notif-icon">📱</span>
+              <h3>SMS</h3>
+              <label class="toggle">
+                <input type="checkbox" id="toggleSms" onchange="toggleNotif('sms', this.checked)" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="notif-card-body">
+              <div class="form-group">
+                <label>Provedor</label>
+                <select id="smsProvider">
+                  <option value="twilio">Twilio</option>
+                  <option value="zenvia">Zenvia</option>
+                  <option value="totalvoice">TotalVoice</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>API Key</label>
+                <input type="password" id="smsToken" placeholder="••••••••••••" />
+              </div>
+              <div class="form-group">
+                <label>Avisar quando restar X senhas</label>
+                <input type="number" id="smsAntecedencia" value="5" min="1" max="10" />
+              </div>
+              <button class="btn-primary" onclick="salvarNotifSms()">Salvar</button>
+              <button class="btn-secondary" onclick="testarNotif('sms')">Testar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Configurações -->
+      <div class="admin-tab hidden" id="adminTab-configuracoes">
+        <h2 class="admin-title">Configurações da Clínica</h2>
+        <div class="config-form">
+          <div class="form-group">
+            <label>Nome da Clínica</label>
+            <input type="text" id="configClinicName" value="Clínica São Lucas" />
+          </div>
+          <div class="form-group">
+            <label>CNPJ</label>
+            <input type="text" id="configCnpj" placeholder="00.000.000/0001-00" />
+          </div>
+          <div class="form-group">
+            <label>Horário de Funcionamento</label>
+            <div class="time-range">
+              <input type="time" id="configHoraInicio" value="07:00" />
+              <span>até</span>
+              <input type="time" id="configHoraFim" value="19:00" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Mensagem do Ticker (Painel TV)</label>
+            <input type="text" id="configTicker" value="Bem-vindo! Traga seus documentos e exames anteriores." />
+          </div>
+          <div class="form-group">
+            <label>Reiniciar numeração às</label>
+            <input type="time" id="configReinicioHora" value="00:00" />
+          </div>
+          <div class="form-group">
+            <label>Alerta sonoro</label>
+            <select id="configSom">
+              <option value="beep">Beep padrão</option>
+              <option value="chime">Chime</option>
+              <option value="bell">Sino</option>
+              <option value="voice">Voz sintética</option>
+            </select>
+          </div>
+          <button class="btn-primary" onclick="salvarConfiguracoes()">Salvar Configurações</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: TRANSFERIR ===================== -->
+<div class="modal-overlay hidden" id="transferModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Transferir Senha</h3>
+      <button class="modal-close" onclick="closeModal('transferModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Transferindo senha: <strong id="transferSenhaNum">---</strong></p>
+      <div class="form-group">
+        <label>Transferir para o serviço</label>
+        <select id="transferServico">
+          <option value="triagem">Triagem</option>
+          <option value="coleta">Coleta</option>
+          <option value="raio-x">Raio-X</option>
+          <option value="caixa">Caixa</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Motivo (opcional)</label>
+        <input type="text" id="transferMotivo" placeholder="Ex: Encaminhamento médico" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="confirmarTransferencia()">Confirmar Transferência</button>
+      <button class="btn-secondary" onclick="closeModal('transferModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: NOVO SERVIÇO ===================== -->
+<div class="modal-overlay hidden" id="serviceModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="serviceModalTitle">Novo Serviço</h3>
+      <button class="modal-close" onclick="closeModal('serviceModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nome do Serviço</label>
+        <input type="text" id="svcNome" placeholder="Ex: Triagem" />
+      </div>
+      <div class="form-group">
+        <label>Prefixo da Senha</label>
+        <input type="text" id="svcPrefixo" placeholder="Ex: T" maxlength="2" />
+      </div>
+      <div class="form-group">
+        <label>Ala / Setor</label>
+        <input type="text" id="svcAla" placeholder="Ex: Ala A" />
+      </div>
+      <div class="form-group">
+        <label>Tempo médio de atendimento (min)</label>
+        <input type="number" id="svcTMedio" value="10" min="1" />
+      </div>
+      <div class="form-group">
+        <label>Cor identificadora</label>
+        <input type="color" id="svcCor" value="#2563eb" />
+      </div>
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="svcAtivo" checked /> Serviço ativo
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="salvarServico()">Salvar</button>
+      <button class="btn-secondary" onclick="closeModal('serviceModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: NOVO GUICHÊ ===================== -->
+<div class="modal-overlay hidden" id="guicheModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Novo Guichê</h3>
+      <button class="modal-close" onclick="closeModal('guicheModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Número do Guichê</label>
+        <input type="number" id="guicheNum" min="1" placeholder="Ex: 6" />
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="guicheDesc" placeholder="Ex: Guichê de Triagem" />
+      </div>
+      <div class="form-group">
+        <label>Serviço padrão</label>
+        <select id="guicheServico">
+          <option value="triagem">Triagem</option>
+          <option value="coleta">Coleta</option>
+          <option value="raio-x">Raio-X</option>
+          <option value="caixa">Caixa</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="salvarGuiche()">Salvar</button>
+      <button class="btn-secondary" onclick="closeModal('guicheModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TOAST ===================== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===================== AUDIO ===================== -->
+<audio id="audioAlert" preload="auto"></audio>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -16,6 +16,21 @@
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
+
+                <flux:sidebar.group :heading="__('Fila de senhas')" class="grid">
+                    <flux:sidebar.item icon="ticket" :href="route('totem')" target="_blank">
+                        {{ __('Totem') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="tv" :href="route('painel')" target="_blank">
+                        {{ __('Painel TV') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="computer-desktop" :href="route('operador')" :current="request()->routeIs('operador')" wire:navigate>
+                        {{ __('Operador') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.dashboard')" :current="request()->routeIs('admin.*')" wire:navigate>
+                        {{ __('Administração') }}
+                    </flux:sidebar.item>
+                </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />
