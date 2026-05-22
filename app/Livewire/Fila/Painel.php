@@ -25,7 +25,7 @@ class Painel extends Component
     public function mount(): void
     {
         $this->bootFilaState();
-        $state = FilaState::get();
+        $state = $this->filaState;
         $this->ala = $state['painelAla'];
         $this->lastCodigo = $state['painelAtual']['codigo'] ?? '---';
         $this->tickClock();
@@ -37,7 +37,8 @@ class Painel extends Component
         $this->clock = $now->format('H:i:s');
         $this->date = $now->locale('pt_BR')->translatedFormat('l, d \d\e F \d\e Y');
 
-        $codigo = FilaState::get()['painelAtual']['codigo'] ?? '---';
+        unset($this->filaState);
+        $codigo = $this->filaState['painelAtual']['codigo'] ?? '---';
         if ($codigo !== $this->lastCodigo && $codigo !== '---') {
             $this->lastCodigo = $codigo;
             $this->dispatch('painel-alert');
@@ -46,9 +47,8 @@ class Painel extends Component
 
     public function updatedAla(string $ala): void
     {
-        $state = FilaState::get();
-        $state['painelAla'] = $ala;
-        FilaState::set($state);
+        FilaState::set(['painelAla' => $ala]);
+        unset($this->filaState);
     }
 
     public function render()

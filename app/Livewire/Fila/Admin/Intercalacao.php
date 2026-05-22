@@ -3,7 +3,7 @@
 namespace App\Livewire\Fila\Admin;
 
 use App\Livewire\Concerns\InteractsWithFilaState;
-use App\Support\FilaState;
+use App\Models\RegraIntercalacao;
 use Flux\Flux;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -28,19 +28,18 @@ class Intercalacao extends Component
 
     public function salvarIntercalacao(): void
     {
-        $state = FilaState::get();
-        $servicos = $this->intServico === 'all'
-            ? array_keys($state['intercalacao'])
-            : [$this->intServico];
+        $query = RegraIntercalacao::query();
 
-        foreach ($servicos as $svcId) {
-            if (isset($state['intercalacao'][$svcId])) {
-                $state['intercalacao'][$svcId]['normais'] = $this->intNormais;
-                $state['intercalacao'][$svcId]['preferenciais'] = $this->intPreferenciais;
-            }
+        if ($this->intServico !== 'all') {
+            $query->where('servico_id', $this->intServico);
         }
 
-        FilaState::set($state);
+        $query->update([
+            'normais_por_ciclo' => $this->intNormais,
+            'preferenciais_por_ciclo' => $this->intPreferenciais,
+        ]);
+
+        unset($this->filaState);
         Flux::toast(variant: 'success', text: __('Regra de intercalação salva.'));
     }
 

@@ -27,7 +27,7 @@
                     <flux:sidebar.item icon="computer-desktop" :href="route('operador')" :current="request()->routeIs('operador')" wire:navigate>
                         {{ __('Operador') }}
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.dashboard')" :current="request()->routeIs('admin.*')" wire:navigate>
+                    <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.relatorios')" :current="request()->routeIs('admin.*')" wire:navigate>
                         {{ __('Administração') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
@@ -36,12 +36,13 @@
             <flux:spacer />
 
             <flux:sidebar.nav>
-                <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                    {{ __('Repository') }}
-                </flux:sidebar.item>
-
-                <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                    {{ __('Documentation') }}
+                <flux:sidebar.item
+                    icon="book-open-text"
+                    :href="route('documentacao')"
+                    :current="request()->routeIs('documentacao')"
+                    wire:navigate
+                >
+                    {{ __('Documentação') }}
                 </flux:sidebar.item>
             </flux:sidebar.nav>
 

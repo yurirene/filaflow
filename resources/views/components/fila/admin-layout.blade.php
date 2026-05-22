@@ -6,7 +6,7 @@
 <div class="flex items-start max-md:flex-col">
     <div class="me-10 w-full pb-4 md:w-[220px]">
         <flux:navlist aria-label="{{ __('Administração') }}">
-            <flux:navlist.item :href="route('admin.dashboard')" :current="request()->routeIs('admin.dashboard')" wire:navigate>
+            <flux:navlist.item :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                 {{ __('Dashboard') }}
             </flux:navlist.item>
             <flux:navlist.item :href="route('admin.relatorios')" :current="request()->routeIs('admin.relatorios')" wire:navigate>
@@ -26,6 +26,9 @@
             </flux:navlist.item>
             <flux:navlist.item :href="route('admin.configuracoes')" :current="request()->routeIs('admin.configuracoes')" wire:navigate>
                 {{ __('Configurações') }}
+            </flux:navlist.item>
+            <flux:navlist.item :href="route('documentacao')" :current="request()->routeIs('documentacao')" wire:navigate>
+                {{ __('Documentação') }}
             </flux:navlist.item>
         </flux:navlist>
     </div>

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Fila\Admin;
+namespace App\Livewire;
 
 use App\Livewire\Concerns\InteractsWithFilaState;
 use App\Support\FilaState;
@@ -39,6 +39,6 @@ class Dashboard extends Component
 
     public function render()
     {
-        return view('livewire.fila.admin.dashboard');
+        return view('livewire.dashboard');
     }
 }

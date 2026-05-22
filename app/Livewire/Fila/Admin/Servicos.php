@@ -3,7 +3,8 @@
 namespace App\Livewire\Fila\Admin;
 
 use App\Livewire\Concerns\InteractsWithFilaState;
-use App\Support\FilaState;
+use App\Models\RegraIntercalacao;
+use App\Models\Servico;
 use Flux\Flux;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -50,26 +51,24 @@ class Servicos extends Component
             'svcPrefixo' => 'required|max:2',
         ]);
 
-        $state = FilaState::get();
-        $id = strtolower(str_replace(' ', '-', $this->svcNome));
-
-        $state['servicos'][] = [
-            'id' => $id,
+        $servico = Servico::query()->create([
             'nome' => $this->svcNome,
             'prefixo' => strtoupper($this->svcPrefixo),
             'ala' => $this->svcAla,
-            'tMedio' => $this->svcTMedio,
+            'tempo_medio_minutos' => $this->svcTMedio,
             'cor' => $this->svcCor,
             'ativo' => $this->svcAtivo,
-            'icon' => '🏥',
-        ];
+            'icone' => '🏥',
+        ]);
 
-        $state['filas'][$id] = [];
-        $state['contadores'][$id] = 0;
-        $state['intercalacao'][$id] = ['normais' => 2, 'preferenciais' => 1, 'cicloAtual' => 0];
-        FilaState::set($state);
+        RegraIntercalacao::query()->create([
+            'servico_id' => $servico->id,
+            'normais_por_ciclo' => 2,
+            'preferenciais_por_ciclo' => 1,
+        ]);
 
         $this->showServiceModal = false;
+        unset($this->filaState);
         Flux::toast(variant: 'success', text: __('Serviço adicionado.'));
     }
 

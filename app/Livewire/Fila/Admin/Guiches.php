@@ -3,7 +3,7 @@
 namespace App\Livewire\Fila\Admin;
 
 use App\Livewire\Concerns\InteractsWithFilaState;
-use App\Support\FilaState;
+use App\Models\Guiche;
 use Flux\Flux;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -21,33 +21,32 @@ class Guiches extends Component
 
     public string $guicheDesc = '';
 
-    public string $guicheServico = 'triagem';
+    public string $guicheServico = '';
 
     public function mount(): void
     {
         $this->bootFilaState();
+        $this->guicheServico = $this->filaState['servicos'][0]['id'] ?? '';
     }
 
     public function openGuicheModal(): void
     {
-        $this->guicheNum = count(FilaState::get()['guiches']) + 1;
+        $this->guicheNum = count($this->filaState['guiches']) + 1;
         $this->guicheDesc = '';
-        $this->guicheServico = 'triagem';
         $this->showGuicheModal = true;
     }
 
     public function salvarGuiche(): void
     {
-        $state = FilaState::get();
-        $state['guiches'][] = [
-            'id' => count($state['guiches']) + 1,
-            'num' => $this->guicheNum,
-            'desc' => $this->guicheDesc ?: __('Guichê :num', ['num' => $this->guicheNum]),
-            'servico' => $this->guicheServico,
+        Guiche::query()->create([
+            'numero' => $this->guicheNum,
+            'descricao' => $this->guicheDesc ?: __('Guichê :num', ['num' => $this->guicheNum]),
+            'servico_padrao_id' => $this->guicheServico ?: null,
             'ativo' => true,
-        ];
-        FilaState::set($state);
+        ]);
+
         $this->showGuicheModal = false;
+        unset($this->filaState);
         Flux::toast(variant: 'success', text: __('Guichê adicionado.'));
     }
 

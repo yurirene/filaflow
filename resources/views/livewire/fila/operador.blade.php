@@ -36,9 +36,9 @@
                 <flux:field>
                     <flux:label>{{ __('Meu guichê') }}</flux:label>
                     <flux:select wire:model.live="guiche">
-                        @for ($i = 1; $i <= 5; $i++)
-                            <flux:select.option value="{{ $i }}">{{ __('Guichê') }} {{ str_pad((string) $i, 2, '0', STR_PAD_LEFT) }}</flux:select.option>
-                        @endfor
+                        @foreach (collect($this->filaState['guiches'])->where('ativo', true) as $g)
+                            <flux:select.option value="{{ $g['num'] }}">{{ __('Guichê') }} {{ str_pad((string) $g['num'], 2, '0', STR_PAD_LEFT) }}</flux:select.option>
+                        @endforeach
                     </flux:select>
                 </flux:field>
                 <flux:field>

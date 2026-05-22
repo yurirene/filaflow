@@ -2,8 +2,12 @@
 
 namespace App\Livewire\Fila;
 
+use App\Fila\Actions\EmitirSenha;
+use App\Fila\Enums\PrioridadeSenha;
+use App\Fila\Exceptions\FilaException;
 use App\Livewire\Concerns\InteractsWithFilaState;
 use App\Support\FilaState;
+use Flux\Flux;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -23,69 +27,36 @@ class Totem extends Component
     public function mount(): void
     {
         $this->bootFilaState();
-        $state = FilaState::get();
-        $this->prioridadeSelecionada = $state['prioridadeSelecionada'];
+        $ui = session(FilaState::SESSION_KEY, []);
+        $this->prioridadeSelecionada = $ui['prioridade_selecionada'] ?? 'normal';
     }
 
     public function setPriority(string $tipo): void
     {
         $this->prioridadeSelecionada = $tipo;
-        $state = FilaState::get();
-        $state['prioridadeSelecionada'] = $tipo;
-        FilaState::set($state);
+        FilaState::set(['prioridadeSelecionada' => $tipo]);
     }
 
-    public function emitirSenha(string $servicoId): void
+    public function emitirSenha(string $servicoId, EmitirSenha $emitir): void
     {
-        $state = FilaState::get();
-        $svc = FilaState::servico($state, $servicoId);
-        if (! $svc) {
-            return;
+        try {
+            $prioridade = PrioridadeSenha::from($this->prioridadeSelecionada);
+            $resultado = $emitir->execute($servicoId, $prioridade);
+
+            $this->ticket = [
+                'codigo' => $resultado['codigo'],
+                'servico' => $resultado['servico_nome'],
+                'prioridade' => $resultado['prioridade'],
+                'badge' => FilaState::prioridadeBadge($resultado['prioridade']),
+                'espera' => $resultado['espera_estimada_minutos'],
+                'posicao' => $resultado['posicao_fila'],
+                'data' => now()->format('d/m/Y H:i'),
+            ];
+            $this->screen = 'confirm';
+            unset($this->filaState);
+        } catch (FilaException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
         }
-
-        $prioridade = $this->prioridadeSelecionada;
-        $isPreferencial = in_array($prioridade, ['idoso', 'pcd', 'gestante'], true);
-
-        $state['contadores'][$servicoId] = ($state['contadores'][$servicoId] ?? 0) + 1;
-        $num = str_pad((string) $state['contadores'][$servicoId], 3, '0', STR_PAD_LEFT);
-        $codigo = "{$svc['prefixo']}{$num}";
-
-        $senha = [
-            'id' => "{$servicoId}_".now()->timestamp,
-            'codigo' => $codigo,
-            'servicoId' => $servicoId,
-            'prioridade' => $prioridade,
-            'isPreferencial' => $isPreferencial,
-            'agendado' => false,
-            'status' => 'aguardando',
-            'emitidaEm' => now()->toIso8601String(),
-            'posicao' => count($state['filas'][$servicoId] ?? []) + 1,
-        ];
-
-        if ($isPreferencial) {
-            $idx = collect($state['filas'][$servicoId])->search(fn ($s) => ! $s['isPreferencial']);
-            if ($idx === false) {
-                $state['filas'][$servicoId][] = $senha;
-            } else {
-                array_splice($state['filas'][$servicoId], $idx, 0, [$senha]);
-            }
-        } else {
-            $state['filas'][$servicoId][] = $senha;
-        }
-
-        $state['kpis']['emEspera'] = FilaState::totalEmEspera($state);
-        FilaState::set($state);
-
-        $this->ticket = [
-            'codigo' => $codigo,
-            'servico' => $svc['nome'],
-            'prioridade' => $prioridade,
-            'badge' => FilaState::prioridadeBadge($prioridade),
-            'espera' => FilaState::calcEspera($state, $servicoId),
-            'posicao' => $senha['posicao'],
-            'data' => now()->format('d/m/Y H:i'),
-        ];
-        $this->screen = 'confirm';
     }
 
     public function resetTotem(): void
@@ -93,9 +64,7 @@ class Totem extends Component
         $this->screen = 'home';
         $this->ticket = null;
         $this->prioridadeSelecionada = 'normal';
-        $state = FilaState::get();
-        $state['prioridadeSelecionada'] = 'normal';
-        FilaState::set($state);
+        FilaState::set(['prioridadeSelecionada' => 'normal']);
     }
 
     public function render()
