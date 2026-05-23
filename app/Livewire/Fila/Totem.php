@@ -5,9 +5,10 @@ namespace App\Livewire\Fila;
 use App\Fila\Actions\EmitirSenha;
 use App\Fila\Enums\PrioridadeSenha;
 use App\Fila\Exceptions\FilaException;
-use App\Livewire\Concerns\InteractsWithFilaState;
-use App\Support\FilaState;
+use App\Fila\OperadorSessao;
+use App\Fila\Queries\TotemIndexQuery;
 use Flux\Flux;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -16,8 +17,6 @@ use Livewire\Component;
 #[Title('Totem')]
 class Totem extends Component
 {
-    use InteractsWithFilaState;
-
     public string $prioridadeSelecionada = 'normal';
 
     public string $screen = 'home';
@@ -26,18 +25,22 @@ class Totem extends Component
 
     public function mount(): void
     {
-        $this->bootFilaState();
-        $ui = session(FilaState::SESSION_KEY, []);
-        $this->prioridadeSelecionada = $ui['prioridade_selecionada'] ?? 'normal';
+        $this->prioridadeSelecionada = OperadorSessao::prioridadeTotem();
+    }
+
+    #[Computed]
+    public function totemData(): array
+    {
+        return app(TotemIndexQuery::class)->execute();
     }
 
     public function setPriority(string $tipo): void
     {
         $this->prioridadeSelecionada = $tipo;
-        FilaState::set(['prioridadeSelecionada' => $tipo]);
+        OperadorSessao::setPrioridadeTotem($tipo);
     }
 
-    public function emitirSenha(string $servicoId, EmitirSenha $emitir): void
+    public function emitirSenha(int $servicoId, EmitirSenha $emitir): void
     {
         try {
             $prioridade = PrioridadeSenha::from($this->prioridadeSelecionada);
@@ -47,13 +50,13 @@ class Totem extends Component
                 'codigo' => $resultado['codigo'],
                 'servico' => $resultado['servico_nome'],
                 'prioridade' => $resultado['prioridade'],
-                'badge' => FilaState::prioridadeBadge($resultado['prioridade']),
+                'badge' => PrioridadeSenha::badgeFrom($resultado['prioridade']),
                 'espera' => $resultado['espera_estimada_minutos'],
                 'posicao' => $resultado['posicao_fila'],
                 'data' => now()->format('d/m/Y H:i'),
             ];
             $this->screen = 'confirm';
-            unset($this->filaState);
+            unset($this->totemData);
         } catch (FilaException $e) {
             Flux::toast(variant: 'danger', text: $e->getMessage());
         }
@@ -64,7 +67,7 @@ class Totem extends Component
         $this->screen = 'home';
         $this->ticket = null;
         $this->prioridadeSelecionada = 'normal';
-        FilaState::set(['prioridadeSelecionada' => 'normal']);
+        OperadorSessao::setPrioridadeTotem('normal');
     }
 
     public function render()

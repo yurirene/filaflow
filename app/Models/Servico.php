@@ -2,23 +2,19 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToEmpresa;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Fila\Services\TempoMedioServico;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Servico extends Model
 {
-    use BelongsToEmpresa;
-    use HasUuids;
-
     protected $fillable = [
-        'empresa_id',
+        'ala_id',
         'nome',
         'prefixo',
-        'ala',
-        'tempo_medio_minutos',
         'cor',
         'icone',
         'ativo',
@@ -28,8 +24,20 @@ class Servico extends Model
     {
         return [
             'ativo' => 'boolean',
-            'tempo_medio_minutos' => 'integer',
         ];
+    }
+
+    /** Tempo médio de atendimento (chamada → finalização), calculado pelo servidor. */
+    protected function tempoMedioMinutos(): Attribute
+    {
+        return Attribute::get(
+            fn (): int => app(TempoMedioServico::class)->paraServico($this->id),
+        );
+    }
+
+    public function ala(): BelongsTo
+    {
+        return $this->belongsTo(Ala::class);
     }
 
     public function senhas(): HasMany

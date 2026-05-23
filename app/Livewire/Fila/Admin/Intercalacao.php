@@ -2,9 +2,10 @@
 
 namespace App\Livewire\Fila\Admin;
 
-use App\Livewire\Concerns\InteractsWithFilaState;
 use App\Models\RegraIntercalacao;
+use App\Models\Servico;
 use Flux\Flux;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -13,17 +14,22 @@ use Livewire\Component;
 #[Title('Intercalação')]
 class Intercalacao extends Component
 {
-    use InteractsWithFilaState;
-
     public string $intServico = 'all';
 
     public int $intNormais = 2;
 
     public int $intPreferenciais = 1;
 
-    public function mount(): void
+    #[Computed]
+    public function servicos()
     {
-        $this->bootFilaState();
+        return Servico::query()->orderBy('nome')->get();
+    }
+
+    #[Computed]
+    public function regras()
+    {
+        return RegraIntercalacao::query()->with('servico')->get();
     }
 
     public function salvarIntercalacao(): void
@@ -39,7 +45,7 @@ class Intercalacao extends Component
             'preferenciais_por_ciclo' => $this->intPreferenciais,
         ]);
 
-        unset($this->filaState);
+        unset($this->regras);
         Flux::toast(variant: 'success', text: __('Regra de intercalação salva.'));
     }
 

@@ -13,6 +13,14 @@
 </head>
 <body class="display-standalone">
     {{ $slot }}
+
+    @persist('toast')
+        <flux:toast.group>
+            <flux:toast />
+        </flux:toast.group>
+    @endpersist
+
+    @fluxScripts
     @livewireScripts
 </body>
 </html>

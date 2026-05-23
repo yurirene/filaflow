@@ -2,10 +2,12 @@
 
 namespace App\Livewire\Fila\Admin;
 
-use App\Livewire\Concerns\InteractsWithFilaState;
+use App\Models\Ala;
 use App\Models\RegraIntercalacao;
 use App\Models\Servico;
 use Flux\Flux;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -14,33 +16,49 @@ use Livewire\Component;
 #[Title('Serviços')]
 class Servicos extends Component
 {
-    use InteractsWithFilaState;
-
     public bool $showServiceModal = false;
+
+    public ?int $editingId = null;
 
     public string $svcNome = '';
 
     public string $svcPrefixo = '';
 
-    public string $svcAla = '';
-
-    public int $svcTMedio = 10;
+    public ?int $svcAlaId = null;
 
     public string $svcCor = '#2563eb';
 
     public bool $svcAtivo = true;
 
-    public function mount(): void
+    #[Computed]
+    public function alas()
     {
-        $this->bootFilaState();
+        return Ala::query()->orderBy('nome')->get();
+    }
+
+    #[Computed]
+    public function servicos()
+    {
+        return Servico::query()->with('ala')->orderBy('nome')->get();
     }
 
     public function openServiceModal(): void
     {
-        $this->reset(['svcNome', 'svcPrefixo', 'svcAla']);
-        $this->svcTMedio = 10;
-        $this->svcCor = '#2563eb';
-        $this->svcAtivo = true;
+        $this->resetForm();
+        $this->svcAlaId = $this->alas->firstWhere('ativo', true)?->id;
+        $this->showServiceModal = true;
+    }
+
+    public function openEditModal(int $id): void
+    {
+        $servico = Servico::query()->findOrFail($id);
+
+        $this->editingId = $servico->id;
+        $this->svcNome = $servico->nome;
+        $this->svcPrefixo = $servico->prefixo;
+        $this->svcAlaId = $servico->ala_id;
+        $this->svcCor = $servico->cor;
+        $this->svcAtivo = $servico->ativo;
         $this->showServiceModal = true;
     }
 
@@ -48,28 +66,63 @@ class Servicos extends Component
     {
         $this->validate([
             'svcNome' => 'required|min:2',
-            'svcPrefixo' => 'required|max:2',
+            'svcPrefixo' => [
+                'required',
+                'max:2',
+                Rule::unique('servicos', 'prefixo')->ignore($this->editingId),
+            ],
+            'svcAlaId' => 'required|exists:alas,id',
+            'svcAtivo' => 'boolean',
         ]);
 
-        $servico = Servico::query()->create([
+        $dados = [
             'nome' => $this->svcNome,
             'prefixo' => strtoupper($this->svcPrefixo),
-            'ala' => $this->svcAla,
-            'tempo_medio_minutos' => $this->svcTMedio,
+            'ala_id' => $this->svcAlaId,
             'cor' => $this->svcCor,
             'ativo' => $this->svcAtivo,
-            'icone' => '🏥',
-        ]);
+        ];
 
-        RegraIntercalacao::query()->create([
-            'servico_id' => $servico->id,
-            'normais_por_ciclo' => 2,
-            'preferenciais_por_ciclo' => 1,
-        ]);
+        if ($this->editingId) {
+            Servico::query()->whereKey($this->editingId)->update($dados);
+            Flux::toast(variant: 'success', text: __('Serviço atualizado.'));
+        } else {
+            $servico = Servico::query()->create(array_merge($dados, ['icone' => '🏥']));
+
+            RegraIntercalacao::query()->create([
+                'servico_id' => $servico->id,
+                'normais_por_ciclo' => 2,
+                'preferenciais_por_ciclo' => 1,
+            ]);
+
+            Flux::toast(variant: 'success', text: __('Serviço adicionado.'));
+        }
 
         $this->showServiceModal = false;
-        unset($this->filaState);
-        Flux::toast(variant: 'success', text: __('Serviço adicionado.'));
+        $this->resetForm();
+        unset($this->servicos);
+    }
+
+    public function excluir(int $id): void
+    {
+        Servico::query()->whereKey($id)->delete();
+        unset($this->servicos);
+        Flux::toast(variant: 'success', text: __('Serviço excluído.'));
+    }
+
+    public function alternarStatus(int $id): void
+    {
+        $servico = Servico::query()->findOrFail($id);
+        $servico->update(['ativo' => ! $servico->ativo]);
+        unset($this->servicos);
+        Flux::toast(variant: 'success', text: __('Status atualizado.'));
+    }
+
+    protected function resetForm(): void
+    {
+        $this->reset(['editingId', 'svcNome', 'svcPrefixo', 'svcAlaId']);
+        $this->svcCor = '#2563eb';
+        $this->svcAtivo = true;
     }
 
     public function render()

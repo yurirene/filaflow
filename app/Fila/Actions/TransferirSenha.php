@@ -15,8 +15,12 @@ class TransferirSenha
         protected OrdemFilaService $ordemFila,
     ) {}
 
-    public function execute(Senha $senha, string $servicoDestinoId): Senha
+    public function execute(Senha $senha, int $servicoDestinoId): Senha
     {
+        if ($senha->consultorio_id !== null) {
+            throw FilaException::senhaNaoPodeTransferir();
+        }
+
         $destino = Servico::query()->where('id', $servicoDestinoId)->where('ativo', true)->first()
             ?? throw FilaException::servicoInativo();
 
@@ -34,9 +38,12 @@ class TransferirSenha
         ]);
 
         FilaAtualizada::dispatch(
-            empresaId: $senha->empresa_id,
             servicoId: $destino->id,
-            tamanhoFila: Senha::query()->aguardando()->where('servico_id', $destino->id)->count(),
+            tamanhoFila: Senha::query()
+                ->aguardando()
+                ->where('servico_id', $destino->id)
+                ->whereNull('consultorio_id')
+                ->count(),
             esperaEstimada: 0,
         );
 

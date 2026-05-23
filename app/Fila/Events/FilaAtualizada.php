@@ -10,8 +10,7 @@ class FilaAtualizada
     use Dispatchable, SerializesModels;
 
     public function __construct(
-        public string $empresaId,
-        public string $servicoId,
+        public int $servicoId,
         public int $tamanhoFila,
         public int $esperaEstimada,
     ) {}

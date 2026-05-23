@@ -2,22 +2,17 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToEmpresa;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RegraIntercalacao extends Model
 {
-    use BelongsToEmpresa;
-    use HasUuids;
 
     public $timestamps = false;
 
     protected $table = 'regras_intercalacao';
 
     protected $fillable = [
-        'empresa_id',
         'servico_id',
         'normais_por_ciclo',
         'preferenciais_por_ciclo',

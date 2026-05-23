@@ -11,8 +11,8 @@
                 <flux:label>{{ __('Serviço') }}</flux:label>
                 <flux:select wire:model="intServico">
                     <flux:select.option value="all">{{ __('Todos os serviços') }}</flux:select.option>
-                    @foreach ($this->filaState['servicos'] as $svc)
-                        <flux:select.option value="{{ $svc['id'] }}">{{ $svc['nome'] }}</flux:select.option>
+                    @foreach ($this->servicos as $svc)
+                        <flux:select.option value="{{ $svc->id }}">{{ $svc->nome }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </flux:field>
@@ -39,10 +39,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($this->filaState['intercalacao'] as $svcId => $ic)
-                            <tr class="border-b border-zinc-100 dark:border-zinc-800">
-                                <td class="py-3">{{ collect($this->filaState['servicos'])->firstWhere('id', $svcId)['nome'] ?? $svcId }}</td>
-                                <td class="py-3">{{ $ic['normais'] }} {{ __('normal') }} : {{ $ic['preferenciais'] }} {{ __('preferencial') }}</td>
+                        @foreach ($this->regras as $regra)
+                            <tr class="border-b border-zinc-100 dark:border-zinc-800" wire:key="regra-{{ $regra->id }}">
+                                <td class="py-3">{{ $regra->servico?->nome ?? '—' }}</td>
+                                <td class="py-3">{{ $regra->normais_por_ciclo }} {{ __('normal') }} : {{ $regra->preferenciais_por_ciclo }} {{ __('preferencial') }}</td>
                             </tr>
                         @endforeach
                     </tbody>

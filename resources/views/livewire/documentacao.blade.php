@@ -60,7 +60,13 @@
                 ↓
          Senha "chamado" + registro em chamadas + Painel TV atualiza
                 ↓
-         Finalizar OU Ausente OU Transferir para outro serviço
+         Finalizar OU Ausente OU Trocar fila no guichê OU Encaminhar ao consultório
+                ↓
+         Fila exclusiva do consultório (consultorio_id preenchido)
+                ↓
+[Operador consultório] → Chamar próxima → Painel exibe consultório e responsável
+                ↓
+         Finalizar OU Ausente
 @endverbatim</pre>
         </div>
 
@@ -78,9 +84,9 @@
 
         <ol class="list-decimal space-y-6 ps-5">
             <li class="space-y-2">
-                <flux:heading size="sm">{{ __('Ambiente e empresa') }}</flux:heading>
+                <flux:heading size="sm">{{ __('Ambiente inicial') }}</flux:heading>
                 <flux:text class="text-sm">
-                    {{ __('Execute as migrations e o seeder (`php artisan migrate --seed`). Isso cria a clínica demo, serviços, guichês e vincula seu usuário à empresa. Cada dado do sistema é isolado por empresa (multi-tenant): usuários só veem a fila da própria clínica.') }}
+                    {{ __('Execute as migrations e o seeder (`php artisan migrate --seed`). Isso cria a clínica demo, alas, serviços, guichês e operadores de teste.') }}
                 </flux:text>
             </li>
             <li class="space-y-2">
@@ -100,7 +106,7 @@
                 <flux:heading size="sm">
                     <a href="{{ route('admin.servicos') }}" class="text-blue-600 hover:underline dark:text-blue-400" wire:navigate>{{ __('Serviços') }}</a>
                 </flux:heading>
-                <flux:text class="text-sm">{{ __('Cada serviço é uma fila independente. O paciente escolhe um no Totem; o operador atende uma fila por vez.') }}</flux:text>
+                <flux:text class="text-sm">{{ __('Cada serviço define o tipo de fila e o prefixo da senha. O paciente escolhe um no Totem; no guichê o operador atende a fila da recepção; após encaminhar, a senha passa à fila do consultório.') }}</flux:text>
                 <ul class="list-disc space-y-1 ps-4 text-sm text-zinc-600 dark:text-zinc-400">
                     <li><strong>{{ __('Prefixo (2 letras)') }}</strong> — {{ __('forma o código da senha (T = Triagem). Deve ser único na clínica.') }}</li>
                     <li><strong>{{ __('Ala / setor') }}</strong> — {{ __('filtra o Painel TV quando há várias alas no mesmo prédio.') }}</li>
@@ -113,11 +119,21 @@
                 <flux:heading size="sm">
                     <a href="{{ route('admin.guiches') }}" class="text-blue-600 hover:underline dark:text-blue-400" wire:navigate>{{ __('Guichês') }}</a>
                 </flux:heading>
-                <flux:text class="text-sm">{{ __('Representam mesas/balcões físicos. O número exibido no Painel vem daqui.') }}</flux:text>
+                <flux:text class="text-sm">{{ __('Ponto de recepção ou triagem na ala. Senhas com consultorio_id vazio ficam na fila do guichê até serem encaminhadas.') }}</flux:text>
                 <ul class="list-disc space-y-1 ps-4 text-sm text-zinc-600 dark:text-zinc-400">
                     <li><strong>{{ __('Número') }}</strong> — {{ __('único por clínica (01, 02…). O operador seleciona “Meu guichê” com este número.') }}</li>
                     <li><strong>{{ __('Serviço padrão') }}</strong> — {{ __('referência administrativa; o operador ainda escolhe o serviço da fila que está atendendo.') }}</li>
                     <li><strong>{{ __('Ativo') }}</strong> — {{ __('guichês inativos não aparecem na lista do operador.') }}</li>
+                </ul>
+            </li>
+            <li class="space-y-2">
+                <flux:heading size="sm">
+                    <a href="{{ route('admin.consultorios') }}" class="text-blue-600 hover:underline dark:text-blue-400" wire:navigate>{{ __('Consultórios') }}</a>
+                </flux:heading>
+                <flux:text class="text-sm">{{ __('Salas de atendimento na ala (número + responsável). Após encaminhar do guichê, a senha só aparece na fila do consultório escolhido.') }}</flux:text>
+                <ul class="list-disc space-y-1 ps-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    <li><strong>{{ __('Serviços permitidos') }}</strong> — {{ __('opcional; se vazio, aceita qualquer serviço da mesma ala.') }}</li>
+                    <li><strong>{{ __('Operador') }}</strong> — {{ __('use o modo Consultório no topo da tela para chamar senhas encaminhadas.') }}</li>
                 </ul>
             </li>
             <li class="space-y-2">
@@ -127,18 +143,11 @@
                 <flux:text class="text-sm">{{ __('Obrigatório se houver atendimento preferencial (idoso, PCD, gestante). Detalhes na seção 6.') }}</flux:text>
             </li>
             <li class="space-y-2">
-                <flux:heading size="sm">
-                    <a href="{{ route('admin.notificacoes') }}" class="text-blue-600 hover:underline dark:text-blue-400" wire:navigate>{{ __('Notificações') }}</a>
-                    <flux:badge size="sm" color="zinc">{{ __('Opcional') }}</flux:badge>
-                </flux:heading>
-                <flux:text class="text-sm">{{ __('WhatsApp/SMS para avisar o paciente quando a fila estiver próxima. Requer credenciais do provedor (Z-API, Twilio, etc.).') }}</flux:text>
-            </li>
-            <li class="space-y-2">
                 <flux:heading size="sm">{{ __('Dispositivos') }}</flux:heading>
                 <ul class="list-disc space-y-1 ps-4 text-sm text-zinc-600 dark:text-zinc-400">
                     <li>{{ __('Totem: tablet/PC na entrada — abra') }} <a href="{{ route('totem') }}" target="_blank" class="text-blue-600 underline">{{ route('totem') }}</a> {{ __('em tela cheia (F11).') }}</li>
                     <li>{{ __('Painel TV: monitor na sala de espera — abra') }} <a href="{{ route('painel') }}" target="_blank" class="text-blue-600 underline">{{ route('painel') }}</a> {{ __('e selecione a ala, se aplicável.') }}</li>
-                    <li>{{ __('Operador: estação de cada atendente — login em') }} <a href="{{ route('operador') }}" class="text-blue-600 underline" wire:navigate>{{ __('Operador') }}</a>.</li>
+                    <li>{{ __('Operador: estação de cada atendente — login em') }} <a href="{{ route('operador.login') }}" class="text-blue-600 underline">{{ __('Operador') }}</a>.</li>
                 </ul>
             </li>
         </ol>
@@ -292,7 +301,7 @@
         <flux:heading size="lg">8. {{ __('Checklist de implantação') }}</flux:heading>
         <flux:card>
             <ul class="space-y-2 text-sm">
-                <li class="flex gap-2"><span>☐</span> {{ __('Migrations e seed executados; usuário vinculado à empresa') }}</li>
+                <li class="flex gap-2"><span>☐</span> {{ __('Migrations e seed executados') }}</li>
                 <li class="flex gap-2"><span>☐</span> {{ __('Configurações da clínica salvas (nome, horários, ticker)') }}</li>
                 <li class="flex gap-2"><span>☐</span> {{ __('Todos os serviços cadastrados com prefixo e tempo médio') }}</li>
                 <li class="flex gap-2"><span>☐</span> {{ __('Guichês numerados conforme o layout físico') }}</li>

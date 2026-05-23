@@ -4,23 +4,18 @@ namespace App\Models;
 
 use App\Fila\Enums\PrioridadeSenha;
 use App\Fila\Enums\StatusSenha;
-use App\Models\Concerns\BelongsToEmpresa;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Senha extends Model
 {
-    use BelongsToEmpresa;
-    use HasUuids;
-
     public $timestamps = false;
 
     protected $fillable = [
-        'empresa_id',
         'codigo',
         'servico_id',
+        'consultorio_id',
         'prioridade',
         'is_preferencial',
         'is_agendado',
@@ -49,6 +44,30 @@ class Senha extends Model
     public function servico(): BelongsTo
     {
         return $this->belongsTo(Servico::class);
+    }
+
+    public function consultorio(): BelongsTo
+    {
+        return $this->belongsTo(Consultorio::class);
+    }
+
+    public function scopeFilaGuiche($query, int $servicoId)
+    {
+        return $query->aguardando()
+            ->where('servico_id', $servicoId)
+            ->whereNull('consultorio_id');
+    }
+
+    public function scopeFilaConsultorio($query, int $consultorioId, ?int $servicoId = null)
+    {
+        $query->aguardando()
+            ->where('consultorio_id', $consultorioId);
+
+        if ($servicoId) {
+            $query->where('servico_id', $servicoId);
+        }
+
+        return $query;
     }
 
     public function chamadas(): HasMany

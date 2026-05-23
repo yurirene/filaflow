@@ -16,7 +16,6 @@ class MarcarSenhaAusente
         ]);
 
         FilaAtualizada::dispatch(
-            empresaId: $senha->empresa_id,
             servicoId: $senha->servico_id,
             tamanhoFila: Senha::query()->aguardando()->where('servico_id', $senha->servico_id)->count(),
             esperaEstimada: 0,

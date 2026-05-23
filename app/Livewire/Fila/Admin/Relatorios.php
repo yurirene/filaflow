@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Fila\Admin;
 
-use App\Livewire\Concerns\InteractsWithFilaState;
-use App\Support\FilaState;
+use App\Fila\Queries\RelatorioResumoQuery;
 use Flux\Flux;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -13,8 +13,6 @@ use Livewire\Component;
 #[Title('Relatórios')]
 class Relatorios extends Component
 {
-    use InteractsWithFilaState;
-
     public string $relPeriodo = 'hoje';
 
     public string $relServico = 'all';
@@ -23,20 +21,22 @@ class Relatorios extends Component
 
     public ?string $relatorioResultado = null;
 
-    public function mount(): void
+    #[Computed]
+    public function servicos()
     {
-        $this->bootFilaState();
+        return app(RelatorioResumoQuery::class)->servicosAtivos();
     }
 
     public function gerarRelatorio(): void
     {
-        $state = $this->filaState;
+        $servicoId = $this->relServico !== 'all' ? (int) $this->relServico : null;
+        $resumo = app(RelatorioResumoQuery::class)->execute($servicoId);
 
         $this->relatorioResultado = __('Período: :periodo · Total atendimentos: :total · Em espera agora: :espera · Ausentes: :ausentes', [
             'periodo' => $this->relPeriodo,
-            'total' => $state['kpis']['totalHoje'],
-            'espera' => FilaState::totalEmEspera($state),
-            'ausentes' => $state['kpis']['ausentes'],
+            'total' => $resumo['totalHoje'],
+            'espera' => $resumo['emEspera'],
+            'ausentes' => $resumo['ausentes'],
         ]);
     }
 

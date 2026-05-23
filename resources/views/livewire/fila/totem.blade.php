@@ -1,10 +1,16 @@
+@php
+    $empresa = $this->totemData['empresa'];
+    $servicos = $this->totemData['servicos'];
+    $filasResumo = $this->totemData['filasResumo'];
+    $notificacoes = $empresa->notificacoes ?? [];
+@endphp
 <div class="view active">
     <div class="totem-container">
         @if ($screen === 'home')
             <div class="totem-screen">
                 <div class="totem-header">
                     <div class="totem-logo">⚕</div>
-                    <h1 class="totem-clinic-name">{{ $this->filaState['clinicName'] }}</h1>
+                    <h1 class="totem-clinic-name">{{ $empresa->nome }}</h1>
                     <p class="totem-subtitle">{{ __('Bem-vindo! Selecione o tipo de atendimento') }}</p>
                 </div>
 
@@ -27,21 +33,20 @@
                 </div>
 
                 <div class="totem-services">
-                    @foreach (collect($this->filaState['servicos'])->where('ativo', true) as $svc)
+                    @foreach ($servicos as $svc)
                         @php
-                            $fila = $this->filaState['filas'][$svc['id']] ?? [];
-                            $espera = \App\Support\FilaState::calcEspera($this->filaState, $svc['id']);
+                            $resumo = $filasResumo[$svc->id] ?? ['tamanho' => 0, 'esperaMin' => 1];
                         @endphp
                         <button
                             type="button"
                             class="service-btn"
-                            style="--svc-color: {{ $svc['cor'] }}"
-                            wire:click="emitirSenha('{{ $svc['id'] }}')"
+                            style="--svc-color: {{ $svc->cor }}"
+                            wire:click="emitirSenha('{{ $svc->id }}')"
                         >
-                            <span class="service-btn-icon">{{ $svc['icon'] }}</span>
-                            <span class="service-btn-name">{{ $svc['nome'] }}</span>
-                            <span class="service-btn-wait">⏱ ~{{ $espera }} min</span>
-                            <span class="service-btn-queue">{{ count($fila) }} {{ __('na fila') }}</span>
+                            <span class="service-btn-icon">{{ $svc->icone }}</span>
+                            <span class="service-btn-name">{{ $svc->nome }}</span>
+                            <span class="service-btn-wait">⏱ ~{{ $resumo['esperaMin'] }} min</span>
+                            <span class="service-btn-queue">{{ $resumo['tamanho'] }} {{ __('na fila') }}</span>
                         </button>
                     @endforeach
                 </div>
@@ -64,7 +69,7 @@
             <div class="totem-screen">
                 <div class="ticket-card">
                     <div class="ticket-header">
-                        <span class="ticket-clinic">{{ $this->filaState['clinicName'] }}</span>
+                        <span class="ticket-clinic">{{ $empresa->nome }}</span>
                         <span class="ticket-date">{{ $ticket['data'] ?? '' }}</span>
                     </div>
                     <div class="ticket-body">
@@ -84,7 +89,7 @@
                     </div>
                     <div class="ticket-footer">
                         <p class="ticket-msg">{{ __('Aguarde ser chamado no painel') }}</p>
-                        @if ($this->filaState['notificacoes']['whatsapp']['ativo'] || $this->filaState['notificacoes']['sms']['ativo'])
+                        @if (($notificacoes['whatsapp']['ativo'] ?? false) || ($notificacoes['sms']['ativo'] ?? false))
                             <p class="ticket-sms">📱 {{ __('Você receberá uma notificação quando sua vez estiver próxima.') }}</p>
                         @endif
                     </div>

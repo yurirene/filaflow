@@ -16,8 +16,8 @@ class UserSeeder extends Seeder
     {
         User::create([
             'name' => 'Yuri Ferreira',
-            'email' => 'admin@filaflow.com',
-            'password' => Hash::make('password'),
+            'email' => 'admin@admin.com',
+            'password' => Hash::make('123'),
         ]);
     }
 }

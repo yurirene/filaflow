@@ -21,7 +21,6 @@ class GeradorCodigoSenha
 
             if (! $contador) {
                 $contador = SenhaContador::query()->create([
-                    'empresa_id' => $servico->empresa_id,
                     'servico_id' => $servico->id,
                     'data' => $hoje,
                     'ultimo_numero' => 0,

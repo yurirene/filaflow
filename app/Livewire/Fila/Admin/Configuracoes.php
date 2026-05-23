@@ -2,8 +2,7 @@
 
 namespace App\Livewire\Fila\Admin;
 
-use App\Livewire\Concerns\InteractsWithFilaState;
-use App\Support\FilaState;
+use App\Models\Empresa;
 use Flux\Flux;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -13,8 +12,6 @@ use Livewire\Component;
 #[Title('Configurações')]
 class Configuracoes extends Component
 {
-    use InteractsWithFilaState;
-
     public string $clinicName = '';
 
     public string $cnpj = '';
@@ -31,31 +28,29 @@ class Configuracoes extends Component
 
     public function mount(): void
     {
-        $this->bootFilaState();
-        $config = FilaState::get()['config'];
-        $this->clinicName = $config['clinicName'];
-        $this->cnpj = $config['cnpj'] ?? '';
-        $this->horaInicio = $config['horaInicio'];
-        $this->horaFim = $config['horaFim'];
-        $this->ticker = $config['ticker'];
-        $this->reinicioHora = $config['reinicioHora'] ?? '00:00';
-        $this->som = $config['som'] ?? 'beep';
+        $empresa = Empresa::instancia();
+        $this->clinicName = $empresa->nome;
+        $this->cnpj = $empresa->cnpj ?? '';
+        $this->horaInicio = $empresa->hora_inicio;
+        $this->horaFim = $empresa->hora_fim;
+        $this->ticker = $empresa->ticker ?? '';
+        $this->reinicioHora = $empresa->reinicio_hora;
+        $this->som = $empresa->som;
     }
 
     public function salvarConfiguracoes(): void
     {
-        $state = FilaState::get();
-        $state['config'] = [
-            'clinicName' => $this->clinicName,
-            'cnpj' => $this->cnpj,
-            'horaInicio' => $this->horaInicio,
-            'horaFim' => $this->horaFim,
+        $empresa = Empresa::instancia();
+        $empresa->update([
+            'nome' => $this->clinicName,
+            'cnpj' => $this->cnpj ?: null,
+            'hora_inicio' => $this->horaInicio,
+            'hora_fim' => $this->horaFim,
             'ticker' => $this->ticker,
-            'reinicioHora' => $this->reinicioHora,
+            'reinicio_hora' => $this->reinicioHora,
             'som' => $this->som,
-        ];
-        $state['clinicName'] = $this->clinicName;
-        FilaState::set($state);
+        ]);
+
         Flux::toast(variant: 'success', text: __('Configurações salvas.'));
     }
 

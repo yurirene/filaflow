@@ -1,3 +1,7 @@
+@php
+    $data = $this->dashboardData;
+    $kpis = $data['kpis'];
+@endphp
 <section class="flex h-full w-full flex-1 flex-col gap-6">
     <div>
         <flux:heading size="xl" level="1">{{ __('Dashboard') }}</flux:heading>
@@ -9,27 +13,27 @@
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <flux:card class="space-y-1">
                 <flux:text>{{ __('Atendimentos hoje') }}</flux:text>
-                <flux:heading size="xl">{{ $this->filaState['kpis']['totalHoje'] ?? 0 }}</flux:heading>
+                <flux:heading size="xl">{{ $kpis['totalHoje'] }}</flux:heading>
             </flux:card>
             <flux:card class="space-y-1">
                 <flux:text>{{ __('Tempo médio') }}</flux:text>
-                <flux:heading size="xl">{{ $this->filaState['kpis']['tMedio'] ?? 0 }} min</flux:heading>
+                <flux:heading size="xl">{{ $kpis['tMedio'] }} min</flux:heading>
             </flux:card>
             <flux:card class="space-y-1">
                 <flux:text>{{ __('Em espera agora') }}</flux:text>
-                <flux:heading size="xl">{{ $this->emEsperaAtual }}</flux:heading>
+                <flux:heading size="xl">{{ $kpis['emEspera'] }}</flux:heading>
             </flux:card>
             <flux:card class="space-y-1">
                 <flux:text>{{ __('Ausentes') }}</flux:text>
-                <flux:heading size="xl">{{ $this->filaState['kpis']['ausentes'] ?? 0 }}</flux:heading>
+                <flux:heading size="xl">{{ $kpis['ausentes'] }}</flux:heading>
             </flux:card>
             <flux:card class="space-y-1">
                 <flux:text>{{ __('Horário de pico') }}</flux:text>
-                <flux:heading size="xl">{{ $this->filaState['kpis']['pico'] ?? '--' }}</flux:heading>
+                <flux:heading size="xl">{{ $kpis['pico'] }}</flux:heading>
             </flux:card>
             <flux:card class="space-y-1">
                 <flux:text>{{ __('Guichês ativos') }}</flux:text>
-                <flux:heading size="xl">{{ $this->filaState['kpis']['guichesAtivos'] ?? 0 }}</flux:heading>
+                <flux:heading size="xl">{{ $kpis['guichesAtivos'] }}</flux:heading>
             </flux:card>
         </div>
     </div>
@@ -61,10 +65,10 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td class="py-3">{{ $this->filaState['operador']['nome'] }}</td>
-                        <td class="py-3">{{ str_pad((string) $this->filaState['operador']['guiche'], 2, '0', STR_PAD_LEFT) }}</td>
-                        <td class="py-3">{{ collect($this->filaState['servicos'])->firstWhere('id', $this->filaState['operador']['servico'])['nome'] ?? '' }}</td>
-                        <td class="py-3">{{ $this->filaState['stats']['atendidos'] }}</td>
+                        <td class="py-3">{{ $data['operadorNome'] }}</td>
+                        <td class="py-3">{{ str_pad((string) $data['guicheNumero'], 2, '0', STR_PAD_LEFT) }}</td>
+                        <td class="py-3">{{ $data['servicoNome'] }}</td>
+                        <td class="py-3">{{ $data['atendidosHoje'] }}</td>
                         <td class="py-3">{{ $this->tMedioOperador }}</td>
                         <td class="py-3"><flux:badge color="green">{{ __('Online') }}</flux:badge></td>
                     </tr>

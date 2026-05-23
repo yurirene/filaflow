@@ -2,14 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use RuntimeException;
 
 class Empresa extends Model
 {
-    use HasUuids;
-
     protected $fillable = [
         'nome',
         'cnpj',
@@ -30,18 +27,9 @@ class Empresa extends Model
         ];
     }
 
-    public function servicos(): HasMany
+    public static function instancia(): self
     {
-        return $this->hasMany(Servico::class);
-    }
-
-    public function guiches(): HasMany
-    {
-        return $this->hasMany(Guiche::class);
-    }
-
-    public function senhas(): HasMany
-    {
-        return $this->hasMany(Senha::class);
+        return static::query()->first()
+            ?? throw new RuntimeException('Nenhuma clínica configurada. Execute o seeder ou cadastre em Configurações.');
     }
 }

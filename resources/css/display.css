@@ -1794,3 +1794,66 @@ body.display-standalone .totem-container {
 body.display-standalone .painel-container {
   min-height: 100vh;
 }
+body.display-standalone .operador-view {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+body.display-standalone .operador-container {
+  min-height: calc(100vh - 52px);
+  flex: 1;
+}
+
+/* Topbar operador (sem nav principal) */
+.operador-topbar {
+  height: 52px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+.operador-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+}
+.operador-topbar-logo { font-size: 20px; }
+.operador-modo-toggle {
+    display: flex;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 4px;
+}
+.operador-modo-toggle .modo-btn {
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.operador-modo-toggle .modo-btn.active {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-weight: 600;
+}
+.operador-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.operador-topbar-actions form { margin: 0; }
+
+.queue-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}

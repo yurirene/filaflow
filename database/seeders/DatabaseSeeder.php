@@ -2,8 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Operador;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -13,13 +12,30 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            EmpresaSeeder::class,
+            UserSeeder::class,
+            AlaSeeder::class,
         ]);
 
-        // $this->call(FilaSeeder::class);
+        Operador::query()->firstOrCreate(
+            ['cpf' => env('FILA_OPERADOR_CPF', '90696573253')],
+            [
+                'nome' => env('FILA_OPERADOR_NOME', 'Yuri Ferreira'),
+                'password' => env('FILA_OPERADOR_SENHA', '123'),
+                'status' => 'ativo',
+            ],
+        );
+
+        if (filter_var(env('FILA_SEED_DEMO', true), FILTER_VALIDATE_BOOL)) {
+            $this->call(FilaSeeder::class);
+
+            return;
+        }
+
+        // $this->call([
+        //     GuicheSeeder::class,
+        //     ConsultorioSeeder::class,
+        // ]);
     }
 }

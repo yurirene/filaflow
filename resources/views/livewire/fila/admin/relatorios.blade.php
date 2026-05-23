@@ -15,8 +15,8 @@
                 <flux:label>{{ __('Serviço') }}</flux:label>
                 <flux:select wire:model="relServico">
                     <flux:select.option value="all">{{ __('Todos') }}</flux:select.option>
-                    @foreach ($this->filaState['servicos'] as $svc)
-                        <flux:select.option value="{{ $svc['id'] }}">{{ $svc['nome'] }}</flux:select.option>
+                    @foreach ($this->servicos as $svc)
+                        <flux:select.option value="{{ $svc->id }}">{{ $svc->nome }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </flux:field>

@@ -3,18 +3,12 @@
 namespace App\Models;
 
 use App\Fila\Enums\StatusAgendamento;
-use App\Models\Concerns\BelongsToEmpresa;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Agendamento extends Model
 {
-    use BelongsToEmpresa;
-    use HasUuids;
-
     protected $fillable = [
-        'empresa_id',
         'paciente_nome',
         'paciente_celular',
         'servico_id',

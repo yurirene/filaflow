@@ -2,18 +2,13 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToEmpresa;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Guiche extends Model
 {
-    use BelongsToEmpresa;
-    use HasUuids;
-
     protected $fillable = [
-        'empresa_id',
+        'ala_id',
         'numero',
         'descricao',
         'servico_padrao_id',
@@ -26,6 +21,11 @@ class Guiche extends Model
             'ativo' => 'boolean',
             'numero' => 'integer',
         ];
+    }
+
+    public function ala(): BelongsTo
+    {
+        return $this->belongsTo(Ala::class);
     }
 
     public function servicoPadrao(): BelongsTo

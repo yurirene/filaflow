@@ -2,22 +2,17 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToEmpresa;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Chamada extends Model
 {
-    use BelongsToEmpresa;
-    use HasUuids;
-
     public $timestamps = false;
 
     protected $fillable = [
-        'empresa_id',
         'senha_id',
         'guiche_id',
+        'consultorio_id',
         'operador_id',
         'chamada_em',
         'rechamada_vezes',
@@ -41,8 +36,13 @@ class Chamada extends Model
         return $this->belongsTo(Guiche::class);
     }
 
+    public function consultorio(): BelongsTo
+    {
+        return $this->belongsTo(Consultorio::class);
+    }
+
     public function operador(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'operador_id');
+        return $this->belongsTo(Operador::class);
     }
 }

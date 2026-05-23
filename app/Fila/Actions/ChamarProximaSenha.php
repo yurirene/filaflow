@@ -7,7 +7,6 @@ use App\Fila\Events\FilaAtualizada;
 use App\Fila\Events\SenhaChamada;
 use App\Fila\Exceptions\FilaException;
 use App\Fila\Services\SelecionadorProximaSenha;
-use App\Fila\TenantContext;
 use App\Models\Chamada;
 use App\Models\Guiche;
 use App\Models\RegraIntercalacao;
@@ -25,20 +24,25 @@ class ChamarProximaSenha
     /**
      * @return array{senha: Senha, chamada: Chamada, servico: Servico, guiche: Guiche}
      */
-    public function execute(string $servicoId, string $guicheId, ?int $operadorId = null): array
+    public function execute(int $servicoId, int $guicheId, ?int $operadorId = null): array
     {
-        $operadorId ??= Auth::id();
+        $operadorId ??= Auth::guard('operador')->id();
 
-        $servico = Servico::query()->where('id', $servicoId)->where('ativo', true)->first()
+        $servico = Servico::query()->with('ala')->where('id', $servicoId)->where('ativo', true)->first()
             ?? throw FilaException::servicoInativo();
 
         $guiche = Guiche::query()->where('id', $guicheId)->where('ativo', true)->first()
             ?? throw FilaException::guicheInvalido();
 
+        if ($guiche->ala_id !== $servico->ala_id) {
+            throw FilaException::guicheAlaIncompativel();
+        }
+
         return DB::transaction(function () use ($servico, $guiche, $operadorId): array {
             $fila = Senha::query()
                 ->aguardando()
                 ->where('servico_id', $servico->id)
+                ->whereNull('consultorio_id')
                 ->orderBy('ordem_fila')
                 ->orderBy('emitida_em')
                 ->lockForUpdate()
@@ -64,27 +68,28 @@ class ChamarProximaSenha
             }
 
             $chamada = Chamada::query()->create([
-                'empresa_id' => TenantContext::requireEmpresaId(),
                 'senha_id' => $senha->id,
                 'guiche_id' => $guiche->id,
                 'operador_id' => $operadorId,
                 'chamada_em' => $agora,
             ]);
 
-            $tamanhoFila = Senha::query()->aguardando()->where('servico_id', $servico->id)->count();
+            $tamanhoFila = Senha::query()
+                ->aguardando()
+                ->where('servico_id', $servico->id)
+                ->whereNull('consultorio_id')
+                ->count();
             $espera = $tamanhoFila * $servico->tempo_medio_minutos;
 
             SenhaChamada::dispatch(
-                empresaId: $servico->empresa_id,
                 codigo: $senha->codigo,
                 servico: $servico->nome,
                 guiche: $guiche->numero,
                 isPreferencial: $senha->is_preferencial,
-                ala: $servico->ala,
+                ala: $servico->ala?->nome,
             );
 
             FilaAtualizada::dispatch(
-                empresaId: $servico->empresa_id,
                 servicoId: $servico->id,
                 tamanhoFila: $tamanhoFila,
                 esperaEstimada: $espera,

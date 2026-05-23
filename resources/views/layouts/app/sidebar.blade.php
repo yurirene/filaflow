@@ -24,11 +24,40 @@
                     <flux:sidebar.item icon="tv" :href="route('painel')" target="_blank">
                         {{ __('Painel TV') }}
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="computer-desktop" :href="route('operador')" :current="request()->routeIs('operador')" wire:navigate>
+                    <flux:sidebar.item
+                        icon="computer-desktop"
+                        :href="auth('operador')->check() ? route('operador.painel') : route('operador.login')"
+                        :current="request()->routeIs('operador.*')"
+                        wire:navigate
+                    >
                         {{ __('Operador') }}
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.relatorios')" :current="request()->routeIs('admin.*')" wire:navigate>
-                        {{ __('Administração') }}
+                </flux:sidebar.group>
+
+                <flux:sidebar.group :heading="__('Administração')" class="grid">
+                    <flux:sidebar.item icon="chart-bar" :href="route('admin.relatorios')" :current="request()->routeIs('admin.relatorios')" wire:navigate>
+                        {{ __('Relatórios') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="building-library" :href="route('admin.alas')" :current="request()->routeIs('admin.alas')" wire:navigate>
+                        {{ __('Alas / setores') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="squares-2x2" :href="route('admin.servicos')" :current="request()->routeIs('admin.servicos')" wire:navigate>
+                        {{ __('Serviços') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="building-office" :href="route('admin.guiches')" :current="request()->routeIs('admin.guiches')" wire:navigate>
+                        {{ __('Guichês') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="building-office-2" :href="route('admin.consultorios')" :current="request()->routeIs('admin.consultorios')" wire:navigate>
+                        {{ __('Consultórios') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="users" :href="route('admin.operadores')" :current="request()->routeIs('admin.operadores')" wire:navigate>
+                        {{ __('Operadores') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="arrows-right-left" :href="route('admin.intercalacao')" :current="request()->routeIs('admin.intercalacao')" wire:navigate>
+                        {{ __('Intercalação') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.configuracoes')" :current="request()->routeIs('admin.configuracoes')" wire:navigate>
+                        {{ __('Configurações') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
             </flux:sidebar.nav>

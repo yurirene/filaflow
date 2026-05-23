@@ -10,11 +10,12 @@ class SenhaChamada
     use Dispatchable, SerializesModels;
 
     public function __construct(
-        public string $empresaId,
         public string $codigo,
         public string $servico,
-        public int $guiche,
+        public ?int $guiche,
         public bool $isPreferencial,
         public ?string $ala = null,
+        public ?int $consultorio = null,
+        public ?string $responsavel = null,
     ) {}
 }

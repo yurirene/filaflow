@@ -2,8 +2,9 @@
 
 namespace App\Livewire\Fila;
 
-use App\Livewire\Concerns\InteractsWithFilaState;
-use App\Support\FilaState;
+use App\Fila\OperadorSessao;
+use App\Fila\Queries\PainelQuery;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -12,8 +13,6 @@ use Livewire\Component;
 #[Title('Painel TV')]
 class Painel extends Component
 {
-    use InteractsWithFilaState;
-
     public string $ala = 'all';
 
     public string $clock = '--:--:--';
@@ -24,11 +23,15 @@ class Painel extends Component
 
     public function mount(): void
     {
-        $this->bootFilaState();
-        $state = $this->filaState;
-        $this->ala = $state['painelAla'];
-        $this->lastCodigo = $state['painelAtual']['codigo'] ?? '---';
+        $this->ala = OperadorSessao::painelAla();
+        $this->lastCodigo = app(PainelQuery::class)->painelAtual()['codigo'];
         $this->tickClock();
+    }
+
+    #[Computed]
+    public function painelData(): array
+    {
+        return app(PainelQuery::class)->execute();
     }
 
     public function tickClock(): void
@@ -36,9 +39,14 @@ class Painel extends Component
         $now = now();
         $this->clock = $now->format('H:i:s');
         $this->date = $now->locale('pt_BR')->translatedFormat('l, d \d\e F \d\e Y');
+    }
 
-        unset($this->filaState);
-        $codigo = $this->filaState['painelAtual']['codigo'] ?? '---';
+    public function refreshPainel(): void
+    {
+        $this->tickClock();
+
+        unset($this->painelData);
+        $codigo = app(PainelQuery::class)->painelAtual()['codigo'];
         if ($codigo !== $this->lastCodigo && $codigo !== '---') {
             $this->lastCodigo = $codigo;
             $this->dispatch('painel-alert');
@@ -47,8 +55,24 @@ class Painel extends Component
 
     public function updatedAla(string $ala): void
     {
-        FilaState::set(['painelAla' => $ala]);
-        unset($this->filaState);
+        OperadorSessao::setPainelAla($ala);
+    }
+
+    #[Computed]
+    public function historicoFiltrado(): array
+    {
+        $historico = $this->painelData['historico'];
+
+        if ($this->ala === 'all') {
+            return $historico;
+        }
+
+        $alaId = (int) $this->ala;
+
+        return array_values(array_filter(
+            $historico,
+            fn (array $item) => ($item['alaId'] ?? null) === $alaId,
+        ));
     }
 
     public function render()

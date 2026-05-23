@@ -13,4 +13,34 @@ enum PrioridadeSenha: string
     {
         return $this !== self::Normal;
     }
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Idoso => '👴 Idoso',
+            self::Pcd => '♿ PCD',
+            self::Gestante => '🤰 Gestante',
+            self::Normal => 'Normal',
+        };
+    }
+
+    public function badge(): string
+    {
+        return match ($this) {
+            self::Idoso => '👴 Idoso — Preferencial',
+            self::Pcd => '♿ PCD — Preferencial',
+            self::Gestante => '🤰 Gestante — Preferencial',
+            self::Normal => 'Atendimento Normal',
+        };
+    }
+
+    public static function labelFrom(string $prioridade): string
+    {
+        return self::tryFrom($prioridade)?->label() ?? 'Preferencial';
+    }
+
+    public static function badgeFrom(string $prioridade): string
+    {
+        return self::tryFrom($prioridade)?->badge() ?? 'Atendimento Normal';
+    }
 }
