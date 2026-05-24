@@ -2,29 +2,42 @@
     $data = $this->painelData;
     $empresa = $data['empresa'];
     $painelAtual = $data['painelAtual'];
+    $temVideos = count($data['videos'] ?? []) > 0;
 @endphp
 <div
     class="view active"
     x-data="{
         speechSupported: false,
+        hasVideos: @js($temVideos),
+        needsUnlock: false,
         unlocked: false,
         unlocking: false,
         unlockError: false,
         init() {
             this.speechSupported = window.filaflowIsSpeechSupported?.() ?? false;
-            this.unlocked = ! this.speechSupported || (window.filaflowIsPainelSpeechUnlocked?.() ?? false);
+            this.needsUnlock = this.speechSupported || this.hasVideos;
+            this.unlocked = ! this.needsUnlock || (window.filaflowIsPainelMediaUnlocked?.() ?? false);
         },
         async iniciarPainel() {
-            if (! this.speechSupported || this.unlocked || this.unlocking) {
+            if (! this.needsUnlock || this.unlocked || this.unlocking) {
                 return;
             }
             this.unlocking = true;
             this.unlockError = false;
             try {
-                await window.filaflowUnlockPainelSpeech();
+                window.filaflowEnablePainelVideoAudio?.();
+
+                if (this.speechSupported) {
+                    await window.filaflowUnlockPainelSpeech();
+                }
+
                 this.unlocked = true;
             } catch {
-                this.unlockError = true;
+                if (window.filaflowIsPainelMediaUnlocked?.()) {
+                    this.unlocked = true;
+                } else {
+                    this.unlockError = true;
+                }
             } finally {
                 this.unlocking = false;
             }
@@ -32,7 +45,7 @@
     }"
 >
     <div
-        x-show="speechSupported && ! unlocked"
+        x-show="needsUnlock && ! unlocked"
         x-cloak
         class="painel-speech-unlock"
         role="dialog"
@@ -41,9 +54,9 @@
     >
         <div class="painel-speech-unlock-card">
             <span class="painel-speech-unlock-icon" aria-hidden="true">🔊</span>
-            <h2 id="painel-speech-unlock-title" class="painel-speech-unlock-title">{{ __('Ativar painel de chamadas') }}</h2>
+            <h2 id="painel-speech-unlock-title" class="painel-speech-unlock-title">{{ __('Ativar áudio do painel') }}</h2>
             <p class="painel-speech-unlock-text">
-                {{ __('Toque no botão abaixo para habilitar os avisos por voz neste dispositivo. Necessário apenas uma vez por sessão do navegador.') }}
+                {{ __('Toque no botão abaixo para habilitar o áudio dos vídeos e os avisos por voz neste dispositivo. Necessário apenas uma vez por sessão do navegador.') }}
             </p>
             <button
                 type="button"
@@ -142,40 +155,49 @@
                 <div class="painel-alert-ring" x-ref="ring"></div>
             </div>
 
-            <div class="painel-history">
-                <div class="painel-history-title">{{ __('ÚLTIMAS CHAMADAS') }}</div>
-                <div class="painel-history-list">
-                    @forelse (array_slice($data['historico'], 0, 8) as $idx => $item)
-                        <div class="history-item {{ $idx === 0 ? 'first' : '' }}" wire:key="hist-{{ $item['codigo'] }}-{{ $item['hora'] }}">
-                            <span class="history-num">{{ $item['codigo'] }}</span>
-                            <div class="history-info">
-                                <div class="history-service">{{ $item['servico'] }}</div>
-                                <div class="history-guiche">
-                                    {{ ($item['tipo'] ?? 'guiche') === 'consultorio' ? __('Consultório') : __('Guichê') }}
-                                    {{ $item['local'] ?? ($item['guiche'] ?? '') }}
-                                </div>
-                            </div>
-                            <span class="history-time">{{ $item['hora'] }}</span>
-                        </div>
-                    @empty
-                        <div style="color: rgba(255,255,255,.4); font-size: 14px;">{{ __('Nenhuma chamada ainda') }}</div>
-                    @endforelse
+            @if (count($data['videos']) > 0)
+                <div
+                    wire:ignore
+                    class="painel-videos"
+                    data-playlist='@json($data['videos'])'
+                    x-data="window.painelVideoPlayer(JSON.parse($el.dataset.playlist || '[]'))"
+                    x-init="init()"
+                >
+                    <div class="painel-videos-frame">
+                        <video
+                            x-ref="player"
+                            class="painel-videos-player"
+                            muted
+                            playsinline
+                            autoplay
+                            preload="auto"
+                        ></video>
+                    </div>
                 </div>
-            </div>
+            @else
+                <div class="painel-videos">
+                    <div class="painel-videos-empty">
+                        <span class="painel-videos-empty-icon" aria-hidden="true">▶</span>
+                        <p>{{ __('Nenhum vídeo em') }} <code>storage/videos</code></p>
+                    </div>
+                </div>
+            @endif
         </div>
 
-        <div class="painel-queues">
-            @foreach ($data['servicos'] as $svc)
-                @php
-                    $resumo = $data['filasResumo'][$svc->id] ?? ['tamanho' => 0, 'esperaMin' => 1];
-                @endphp
-                <div class="painel-queue-card" wire:key="queue-{{ $svc->id }}">
-                    <div class="queue-card-title">{{ $svc->nome }}</div>
-                    <div class="queue-card-count">{{ $resumo['tamanho'] }}</div>
-                    <div class="queue-card-label">{{ __('na fila') }}</div>
-                    <div class="queue-card-wait">~{{ $resumo['esperaMin'] }} min</div>
+        <div class="painel-historico">
+            @forelse (array_slice($data['historico'], 0, 4) as $idx => $item)
+                <div class="painel-historico-card {{ $idx === 0 ? 'first' : '' }}" wire:key="hist-{{ $item['codigo'] }}-{{ $item['hora'] }}">
+                    <div class="painel-historico-meta">
+                        {{ ($item['tipo'] ?? 'guiche') === 'consultorio' ? __('Consultório') : __('Guichê') }}
+                        {{ $item['local'] ?? ($item['guiche'] ?? '') }}
+                    </div>
+                    <div class="painel-historico-codigo">{{ $item['codigo'] }}</div>
+                    <div class="painel-historico-servico">{{ $item['servico'] }}</div>
+                    <div class="painel-historico-hora">{{ $item['hora'] }}</div>
                 </div>
-            @endforeach
+            @empty
+                <div class="painel-historico-empty">{{ __('Nenhuma chamada ainda') }}</div>
+            @endforelse
         </div>
 
         <div class="painel-ticker">

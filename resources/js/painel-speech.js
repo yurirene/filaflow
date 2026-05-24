@@ -5,6 +5,7 @@ const WARMUP_TEXT = 'Painel de chamadas iniciado.';
 
 let unlocked = false;
 let pendingPainel = null;
+let activeChamadaSpeechId = 0;
 
 function localNumber(local) {
     const parsed = parseInt(local, 10);
@@ -23,7 +24,7 @@ function pickPtVoice() {
 function buildTexto({ paciente, local, codigo, tipo }) {
     const localNum = localNumber(local);
     const pacienteTrim = (paciente ?? '').trim();
-console.log(tipo, pacienteTrim, localNum, codigo);
+
     if (tipo === MODO_CONSULTORIO && pacienteTrim) {
         return `Paciente ${pacienteTrim}, favor dirigir-se ao consultório ${localNum}. Senha ${codigo}.`;
     }
@@ -69,14 +70,22 @@ function persistUnlocked() {
     } catch {
         // sessionStorage indisponível (modo privado restrito)
     }
+
+    window.filaflowEnablePainelVideoAudio?.();
 }
 
-function speakText(text, { volume = 1 } = {}) {
+function speakText(text, { volume = 1, chamada = false } = {}) {
     return new Promise((resolve, reject) => {
         if (! isSpeechSupported()) {
             reject(new Error('speech_not_supported'));
 
             return;
+        }
+
+        const speechId = chamada ? ++activeChamadaSpeechId : null;
+
+        if (chamada) {
+            window.dispatchEvent(new CustomEvent('painel-speech-start'));
         }
 
         window.speechSynthesis.cancel();
@@ -92,8 +101,16 @@ function speakText(text, { volume = 1 } = {}) {
             utterance.voice = voice;
         }
 
-        utterance.onend = () => resolve();
-        utterance.onerror = (event) => reject(event.error ?? new Error('speech_error'));
+        const finish = (callback) => {
+            if (chamada && speechId === activeChamadaSpeechId) {
+                window.dispatchEvent(new CustomEvent('painel-speech-end'));
+            }
+
+            callback();
+        };
+
+        utterance.onend = () => finish(() => resolve());
+        utterance.onerror = (event) => finish(() => reject(event.error ?? new Error('speech_error')));
 
         window.speechSynthesis.speak(utterance);
     });
@@ -133,7 +150,7 @@ export function falarChamadaPainel(painel) {
     }
 
     ensureVoicesLoaded(() => {
-        speakText(buildTexto(painel)).catch(() => {});
+        speakText(buildTexto(painel), { chamada: true }).catch(() => {});
     });
 }
 

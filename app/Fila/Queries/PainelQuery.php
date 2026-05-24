@@ -20,7 +20,8 @@ class PainelQuery
      *     servicos: Collection<int, Servico>,
      *     painelAtual: array{tipo: string, codigo: string, servico: string, local: string},
      *     historico: list<array{codigo: string, servico: string, servicoId: int, alaId: int, tipo: string, local: string, hora: string}>,
-     *     filasResumo: array<int, array{tamanho: int, esperaMin: int}>
+     *     filasResumo: array<int, array{tamanho: int, esperaMin: int}>,
+     *     videos: list<string>
      * }
      */
     public function execute(?int $alaId = null): array
@@ -79,6 +80,7 @@ class PainelQuery
             'painelAtual' => $this->painelAtual($alaId),
             'historico' => $historico,
             'filasResumo' => $filasResumo,
+            'videos' => app(PainelVideosQuery::class)->urls(),
         ];
     }
 

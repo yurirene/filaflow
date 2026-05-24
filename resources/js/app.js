@@ -6,7 +6,9 @@
 
 import './echo';
 import './fila-echo';
+import { initPainelVideos } from './painel-videos';
 import { initPainelSpeech } from './painel-speech';
 import './dashboard-charts';
 
+initPainelVideos();
 initPainelSpeech();
