@@ -1,0 +1,54 @@
+name: Build frontend assets
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'resources/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - '.github/workflows/build-assets.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: build-assets-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build assets
+        env:
+          VITE_PUSHER_APP_KEY: ${{ secrets.PUSHER_APP_KEY }}
+          VITE_PUSHER_APP_CLUSTER: ${{ secrets.PUSHER_APP_CLUSTER }}
+          VITE_APP_NAME: FilaFlow
+        run: npm run build
+
+      - name: Commit and push build
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/build
+          if git diff --staged --quiet; then
+            echo "Nenhuma alteração em public/build."
+            exit 0
+          fi
+          git commit -m "chore: rebuild frontend assets [skip ci]"
+          git push
