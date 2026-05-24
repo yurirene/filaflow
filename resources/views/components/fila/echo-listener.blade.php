@@ -1,6 +1,7 @@
 @props([
     'onFila' => 'onFilaAtualizada',
     'onSenha' => null,
+    'filterAla' => false,
 ])
 
 <div
@@ -10,4 +11,5 @@
     data-fila-echo
     data-on-fila="{{ $onFila }}"
     @if ($onSenha) data-on-senha="{{ $onSenha }}" @endif
+    @if ($filterAla) data-filter-ala="1" @endif
 ></div>

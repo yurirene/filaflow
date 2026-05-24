@@ -6,12 +6,14 @@ use App\Fila\Enums\StatusSenha;
 use App\Fila\Events\FilaAtualizada;
 use App\Fila\Events\SenhaChamada;
 use App\Fila\Exceptions\FilaException;
+use App\Fila\Queries\OperadorPainelQuery;
 use App\Fila\Services\SelecionadorProximaSenha;
 use App\Models\Chamada;
 use App\Models\Guiche;
 use App\Models\RegraIntercalacao;
 use App\Models\Senha;
 use App\Models\Servico;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -19,53 +21,59 @@ class ChamarProximaSenha
 {
     public function __construct(
         protected SelecionadorProximaSenha $selecionador,
+        protected OperadorPainelQuery $painelQuery,
     ) {}
 
     /**
      * @return array{senha: Senha, chamada: Chamada, servico: Servico, guiche: Guiche}
      */
-    public function execute(int $servicoId, int $guicheId, ?int $operadorId = null): array
+    public function execute(int $guicheId, ?int $servicoId = null, ?int $operadorId = null): array
     {
         $operadorId ??= Auth::guard('operador')->id();
-
-        $servico = Servico::query()->with('ala')->where('id', $servicoId)->where('ativo', true)->first()
-            ?? throw FilaException::servicoInativo();
 
         $guiche = Guiche::query()->where('id', $guicheId)->where('ativo', true)->first()
             ?? throw FilaException::guicheInvalido();
 
-        if ($guiche->ala_id !== $servico->ala_id) {
-            throw FilaException::guicheAlaIncompativel();
+        if ($servicoId) {
+            $servico = Servico::query()->with('ala')->where('id', $servicoId)->where('ativo', true)->first()
+                ?? throw FilaException::servicoInativo();
+
+            if ($guiche->ala_id !== $servico->ala_id) {
+                throw FilaException::guicheAlaIncompativel();
+            }
         }
 
-        return DB::transaction(function () use ($servico, $guiche, $operadorId): array {
+        return DB::transaction(function () use ($guiche, $servicoId, $operadorId): array {
+            $servicoIds = $servicoId
+                ? collect([$servicoId])
+                : $this->painelQuery->servicosDoGuiche($guiche)->pluck('id');
+
+            if ($servicoIds->isEmpty()) {
+                throw FilaException::filaVazia();
+            }
+
             $fila = Senha::query()
                 ->aguardando()
-                ->where('servico_id', $servico->id)
                 ->whereNull('consultorio_id')
+                ->whereIn('servico_id', $servicoIds)
                 ->orderBy('ordem_fila')
                 ->orderBy('emitida_em')
                 ->lockForUpdate()
                 ->get();
 
-            $regra = RegraIntercalacao::query()
-                ->where('servico_id', $servico->id)
-                ->lockForUpdate()
-                ->first();
+            $senha = $servicoId
+                ? $this->selecionarUmaFila($fila, $servicoId)
+                : $this->selecionarMultiplasFilas($fila);
 
-            $senha = $this->selecionador->selecionar($fila, $regra)
-                ?? throw FilaException::filaVazia();
+            $senha ??= throw FilaException::filaVazia();
 
+            $servico = Servico::query()->with('ala')->findOrFail($senha->servico_id);
             $agora = now();
 
             $senha->update([
                 'status' => StatusSenha::Chamado,
                 'chamada_em' => $agora,
             ]);
-
-            if ($regra) {
-                $regra->increment('ciclo_atual');
-            }
 
             $chamada = Chamada::query()->create([
                 'senha_id' => $senha->id,
@@ -76,8 +84,8 @@ class ChamarProximaSenha
 
             $tamanhoFila = Senha::query()
                 ->aguardando()
-                ->where('servico_id', $servico->id)
                 ->whereNull('consultorio_id')
+                ->whereIn('servico_id', $servicoIds)
                 ->count();
             $espera = $tamanhoFila * $servico->tempo_medio_minutos;
 
@@ -103,5 +111,59 @@ class ChamarProximaSenha
                 'guiche' => $guiche,
             ];
         });
+    }
+
+    /** @param Collection<int, Senha> $fila */
+    protected function selecionarUmaFila(Collection $fila, int $servicoId): ?Senha
+    {
+        $subset = $fila->where('servico_id', $servicoId)->values();
+
+        $regra = RegraIntercalacao::query()
+            ->where('servico_id', $servicoId)
+            ->lockForUpdate()
+            ->first();
+
+        $senha = $this->selecionador->selecionar($subset, $regra);
+
+        if ($senha && $regra) {
+            $regra->increment('ciclo_atual');
+        }
+
+        return $senha;
+    }
+
+    /** @param Collection<int, Senha> $fila */
+    protected function selecionarMultiplasFilas(Collection $fila): ?Senha
+    {
+        if ($fila->isEmpty()) {
+            return null;
+        }
+
+        $melhor = null;
+
+        foreach ($fila->groupBy('servico_id') as $sid => $grupo) {
+            $regra = RegraIntercalacao::query()
+                ->where('servico_id', $sid)
+                ->lockForUpdate()
+                ->first();
+
+            $candidata = $this->selecionador->selecionar($grupo->values(), $regra);
+
+            if (! $candidata) {
+                continue;
+            }
+
+            if ($regra) {
+                $regra->increment('ciclo_atual');
+            }
+
+            if ($melhor === null
+                || $candidata->ordem_fila < $melhor->ordem_fila
+                || ($candidata->ordem_fila === $melhor->ordem_fila && $candidata->emitida_em < $melhor->emitida_em)) {
+                $melhor = $candidata;
+            }
+        }
+
+        return $melhor;
     }
 }

@@ -27,7 +27,7 @@ class ChamarSenhaBroadcastTest extends TestCase
         $servico = Servico::query()->where('ativo', true)->first();
         $guiche = Guiche::query()->where('ala_id', $servico->ala_id)->where('ativo', true)->first();
 
-        app(ChamarProximaSenha::class)->execute($servico->id, $guiche->id);
+        app(ChamarProximaSenha::class)->execute($guiche->id, $servico->id);
 
         Event::assertDispatched(SenhaChamada::class);
         Event::assertDispatched(FilaAtualizada::class);

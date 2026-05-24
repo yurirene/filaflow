@@ -1,6 +1,7 @@
 @php
     $data = $this->dashboardData;
     $kpis = $data['kpis'];
+    $charts = $data['charts'];
 @endphp
 <section class="flex h-full w-full flex-1 flex-col gap-6">
     <div>
@@ -38,14 +39,24 @@
         </div>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-2">
+    <div
+        id="dashboard-charts"
+        class="grid gap-4 lg:grid-cols-2"
+        wire:ignore
+        data-por-hora='@json($charts['porHora'])'
+        data-por-servico='@json($charts['porServico'])'
+    >
         <flux:card>
             <flux:heading class="mb-4">{{ __('Atendimentos por hora') }}</flux:heading>
-            <flux:text class="text-zinc-500">{{ __('Gráfico disponível em relatórios.') }}</flux:text>
+            <div class="h-52 w-full">
+                <canvas id="chartHora" class="h-full w-full"></canvas>
+            </div>
         </flux:card>
         <flux:card>
             <flux:heading class="mb-4">{{ __('Distribuição por serviço') }}</flux:heading>
-            <flux:text class="text-zinc-500">{{ __('Gráfico disponível em relatórios.') }}</flux:text>
+            <div class="h-52 w-full">
+                <canvas id="chartServico" class="h-full w-full"></canvas>
+            </div>
         </flux:card>
     </div>
 

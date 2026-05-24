@@ -7,7 +7,6 @@
         <div class="flex min-h-screen flex-col items-center justify-center p-6">
             <div class="mb-10 text-center">
                 <x-app-logo href="{{ route('home') }}" class="justify-center" />
-                <flux:heading size="xl" level="1" class="mt-6">{{ config('app.name', 'Filaflow') }}</flux:heading>
                 <flux:text class="mt-2 text-zinc-500 dark:text-zinc-400">{{ __('Selecione o módulo de acesso') }}</flux:text>
                 <br>
             </div>

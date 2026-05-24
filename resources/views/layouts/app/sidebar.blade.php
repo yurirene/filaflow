@@ -43,9 +43,6 @@
                 </flux:sidebar.group>
 
                 <flux:sidebar.group :heading="__('Administração')" class="grid">
-                    <flux:sidebar.item icon="chart-bar" :href="route('admin.relatorios')" :current="request()->routeIs('admin.relatorios')" wire:navigate>
-                        {{ __('Relatórios') }}
-                    </flux:sidebar.item>
                     <flux:sidebar.item icon="building-library" :href="route('admin.alas')" :current="request()->routeIs('admin.alas')" wire:navigate>
                         {{ __('Alas / setores') }}
                     </flux:sidebar.item>
@@ -66,6 +63,9 @@
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="arrows-right-left" :href="route('admin.intercalacao')" :current="request()->routeIs('admin.intercalacao')" wire:navigate>
                         {{ __('Intercalação') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="chart-bar" :href="route('admin.relatorios')" :current="request()->routeIs('admin.relatorios')" wire:navigate>
+                        {{ __('Relatórios') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.configuracoes')" :current="request()->routeIs('admin.configuracoes')" wire:navigate>
                         {{ __('Configurações') }}

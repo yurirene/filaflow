@@ -6,3 +6,7 @@
 
 import './echo';
 import './fila-echo';
+import { initPainelSpeech } from './painel-speech';
+import './dashboard-charts';
+
+initPainelSpeech();

@@ -2,7 +2,7 @@
     <div>
         <flux:heading size="xl" level="1">{{ __('Documentação') }}</flux:heading>
         <flux:subheading class="mt-2">
-            {{ __('Guia de configuração, fluxos de atendimento e decisões de cada opção do FilaFlow.') }}
+            {{ __('Guia de uso, fluxos de atendimento e orientações para configurar o FilaFlow na sua clínica.') }}
         </flux:subheading>
         <flux:separator variant="subtle" class="mt-4" />
     </div>
@@ -16,7 +16,7 @@
             <a href="#modulos" class="text-blue-600 hover:underline dark:text-blue-400">4. {{ __('Módulos do dia a dia') }}</a>
             <a href="#admin" class="text-blue-600 hover:underline dark:text-blue-400">5. {{ __('Administração — opções e porquês') }}</a>
             <a href="#regras" class="text-blue-600 hover:underline dark:text-blue-400">6. {{ __('Regras de negócio') }}</a>
-            <a href="#manutencao" class="text-blue-600 hover:underline dark:text-blue-400">7. {{ __('Manutenção e agendamentos') }}</a>
+            <a href="#manutencao" class="text-blue-600 hover:underline dark:text-blue-400">7. {{ __('Agendamentos e rotina') }}</a>
             <a href="#checklist" class="text-blue-600 hover:underline dark:text-blue-400">8. {{ __('Checklist de implantação') }}</a>
         </nav>
     </flux:card>
@@ -33,11 +33,15 @@
             </flux:card>
             <flux:card class="space-y-1">
                 <flux:badge color="purple">{{ __('Operador') }}</flux:badge>
-                <flux:text class="text-sm">{{ __('Chamada, finalização, transferência e ausência.') }}</flux:text>
+                <flux:text class="text-sm">{{ __('Chamada, finalização, transferência, encaminhamento e ausência.') }}</flux:text>
             </flux:card>
             <flux:card class="space-y-1">
                 <flux:badge color="zinc">{{ __('Painel TV') }}</flux:badge>
-                <flux:text class="text-sm">{{ __('Exibe senha chamada, guichê e filas por ala.') }}</flux:text>
+                <flux:text class="text-sm">{{ __('Exibe senha chamada, guichê ou consultório, com aviso por voz.') }}</flux:text>
+            </flux:card>
+            <flux:card class="space-y-1">
+                <flux:badge color="teal">{{ __('Médico') }}</flux:badge>
+                <flux:text class="text-sm">{{ __('Chamada de senhas encaminhadas ao consultório vinculado.') }}</flux:text>
             </flux:card>
             <flux:card class="space-y-1">
                 <flux:badge color="green">{{ __('Administração') }}</flux:badge>
@@ -50,30 +54,20 @@
         <flux:heading size="lg">2. {{ __('Fluxo do atendimento') }}</flux:heading>
         <flux:text>{{ __('Entender este fluxo ajuda a configurar na ordem certa e a escolher cada opção com critério.') }}</flux:text>
 
-        <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 font-mono text-xs leading-relaxed dark:border-zinc-700 dark:bg-zinc-900">
-            <pre class="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">@verbatim
-[Paciente] → Totem: escolhe prioridade + serviço → Senha emitida (ex: T042)
-                ↓
-         Fila "aguardando" (ordem: agendados → preferenciais → normais)
-                ↓
-[Operador] → Chamar próxima → Intercalação aplica (ex: 2 normais : 1 preferencial)
-                ↓
-         Senha "chamado" + registro em chamadas + Painel TV atualiza
-                ↓
-         Finalizar OU Ausente OU Trocar fila no guichê OU Encaminhar ao consultório
-                ↓
-         Fila exclusiva do consultório (consultorio_id preenchido)
-                ↓
-[Operador consultório] → Chamar próxima → Painel exibe consultório e responsável
-                ↓
-         Finalizar OU Ausente
-@endverbatim</pre>
-        </div>
+        <flux:card class="space-y-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+            <p><strong>1.</strong> {{ __('Paciente retira senha no Totem (prioridade + serviço).') }}</p>
+            <p><strong>2.</strong> {{ __('Senha entra na fila de espera (agendados, preferenciais e normais).') }}</p>
+            <p><strong>3.</strong> {{ __('Operador na recepção chama a próxima senha do guichê.') }}</p>
+            <p><strong>4.</strong> {{ __('Painel TV atualiza e anuncia a chamada.') }}</p>
+            <p><strong>5.</strong> {{ __('Operador finaliza, marca ausente, transfere de serviço ou encaminha ao consultório com nome do paciente.') }}</p>
+            <p><strong>6.</strong> {{ __('No consultório, médico ou operador chama a fila da sala.') }}</p>
+            <p><strong>7.</strong> {{ __('Atendimento finalizado ou paciente ausente.') }}</p>
+        </flux:card>
 
         <flux:card class="space-y-2">
             <flux:heading size="sm">{{ __('Por que separar Totem, Operador e Painel?') }}</flux:heading>
             <flux:text class="text-sm">
-                {{ __('O Totem fica em quiosque público (sem senha de usuário). O Operador exige login e registro de quem atende. O Painel roda em TV na sala de espera, só leitura. Separar reduz risco de alteração indevida e permite hardware dedicado em cada ponto.') }}
+                {{ __('O Totem fica em quiosque público (sem senha de usuário). O Operador exige login e registro de quem atende. O Painel roda em TV na sala de espera, só leitura. Separar reduz risco de alteração indevida e permite um equipamento dedicado em cada ponto.') }}
             </flux:text>
         </flux:card>
     </article>
@@ -84,10 +78,14 @@
 
         <ol class="list-decimal space-y-6 ps-5">
             <li class="space-y-2">
-                <flux:heading size="sm">{{ __('Ambiente inicial') }}</flux:heading>
-                <flux:text class="text-sm">
-                    {{ __('Execute as migrations e o seeder (`php artisan migrate --seed`). Isso cria a clínica demo, alas, serviços, guichês e operadores de teste.') }}
-                </flux:text>
+                <flux:heading size="sm">
+                    <a href="{{ route('admin.alas') }}" class="text-blue-600 hover:underline dark:text-blue-400" wire:navigate>{{ __('Alas / setores') }}</a>
+                </flux:heading>
+                <flux:text class="text-sm">{{ __('Primeiro cadastro estrutural. Define onde guichês, consultórios e serviços ficam no prédio.') }}</flux:text>
+                <ul class="list-disc space-y-1 ps-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    <li><strong>{{ __('Ala de consultório') }}</strong> — {{ __('marque quando a ala tiver salas de atendimento médico.') }}</li>
+                    <li><strong>{{ __('Ativo') }}</strong> — {{ __('alas inativas não aparecem nos seletores.') }}</li>
+                </ul>
             </li>
             <li class="space-y-2">
                 <flux:heading size="sm">
@@ -96,33 +94,32 @@
                 <flux:text class="text-sm">{{ __('Defina identidade e comportamento global antes dos cadastros operacionais.') }}</flux:text>
                 <ul class="list-disc space-y-1 ps-4 text-sm text-zinc-600 dark:text-zinc-400">
                     <li><strong>{{ __('Nome / CNPJ') }}</strong> — {{ __('aparecem no Totem e no Painel.') }}</li>
-                    <li><strong>{{ __('Abertura / Fechamento') }}</strong> — {{ __('referência exibida no rodapé do Painel; orienta o público.') }}</li>
+                    <li><strong>{{ __('Abertura / Fechamento') }}</strong> — {{ __('referência exibida no rodapé do Painel.') }}</li>
                     <li><strong>{{ __('Ticker') }}</strong> — {{ __('mensagem rolante no Painel (documentos, exames, etc.).') }}</li>
-                    <li><strong>{{ __('Reiniciar numeração') }}</strong> — {{ __('horário em que o contador diário de senhas (T001, C001…) volta a 1. Use após o expediente ou à meia-noite.') }}</li>
-                    <li><strong>{{ __('Alerta sonoro') }}</strong> — {{ __('tipo de som quando uma nova senha aparece no Painel (beep, chime, etc.).') }}</li>
+                    <li><strong>{{ __('Reiniciar numeração') }}</strong> — {{ __('horário em que os contadores diários de senha voltam a 1.') }}</li>
                 </ul>
             </li>
             <li class="space-y-2">
                 <flux:heading size="sm">
                     <a href="{{ route('admin.servicos') }}" class="text-blue-600 hover:underline dark:text-blue-400" wire:navigate>{{ __('Serviços') }}</a>
                 </flux:heading>
-                <flux:text class="text-sm">{{ __('Cada serviço define o tipo de fila e o prefixo da senha. O paciente escolhe um no Totem; no guichê o operador atende a fila da recepção; após encaminhar, a senha passa à fila do consultório.') }}</flux:text>
+                <flux:text class="text-sm">{{ __('Cada serviço define o tipo de fila e o prefixo da senha.') }}</flux:text>
                 <ul class="list-disc space-y-1 ps-4 text-sm text-zinc-600 dark:text-zinc-400">
                     <li><strong>{{ __('Prefixo (2 letras)') }}</strong> — {{ __('forma o código da senha (T = Triagem). Deve ser único na clínica.') }}</li>
-                    <li><strong>{{ __('Ala / setor') }}</strong> — {{ __('filtra o Painel TV quando há várias alas no mesmo prédio.') }}</li>
-                    <li><strong>{{ __('Tempo médio (min)') }}</strong> — {{ __('multiplicado pela posição na fila para estimar espera no Totem (ex: 3ª posição × 8 min ≈ 24 min).') }}</li>
+                    <li><strong>{{ __('Ala / setor') }}</strong> — {{ __('filtra o Painel TV quando há várias alas.') }}</li>
+                    <li><strong>{{ __('Tempo médio (min)') }}</strong> — {{ __('usado para estimar a espera no Totem.') }}</li>
                     <li><strong>{{ __('Cor') }}</strong> — {{ __('identificação visual no Totem.') }}</li>
-                    <li><strong>{{ __('Ativo') }}</strong> — {{ __('serviços inativos somem do Totem mas permanecem no histórico.') }}</li>
+                    <li><strong>{{ __('Ativo') }}</strong> — {{ __('serviços inativos somem do Totem.') }}</li>
                 </ul>
             </li>
             <li class="space-y-2">
                 <flux:heading size="sm">
                     <a href="{{ route('admin.guiches') }}" class="text-blue-600 hover:underline dark:text-blue-400" wire:navigate>{{ __('Guichês') }}</a>
                 </flux:heading>
-                <flux:text class="text-sm">{{ __('Ponto de recepção ou triagem na ala. Senhas com consultorio_id vazio ficam na fila do guichê até serem encaminhadas.') }}</flux:text>
+                <flux:text class="text-sm">{{ __('Ponto de recepção ou triagem na ala.') }}</flux:text>
                 <ul class="list-disc space-y-1 ps-4 text-sm text-zinc-600 dark:text-zinc-400">
                     <li><strong>{{ __('Número') }}</strong> — {{ __('único por clínica (01, 02…). O operador seleciona “Meu guichê” com este número.') }}</li>
-                    <li><strong>{{ __('Serviço padrão') }}</strong> — {{ __('referência administrativa; o operador ainda escolhe o serviço da fila que está atendendo.') }}</li>
+                    <li><strong>{{ __('Serviço padrão') }}</strong> — {{ __('referência administrativa.') }}</li>
                     <li><strong>{{ __('Ativo') }}</strong> — {{ __('guichês inativos não aparecem na lista do operador.') }}</li>
                 </ul>
             </li>
@@ -130,11 +127,23 @@
                 <flux:heading size="sm">
                     <a href="{{ route('admin.consultorios') }}" class="text-blue-600 hover:underline dark:text-blue-400" wire:navigate>{{ __('Consultórios') }}</a>
                 </flux:heading>
-                <flux:text class="text-sm">{{ __('Salas de atendimento na ala (número + responsável). Após encaminhar do guichê, a senha só aparece na fila do consultório escolhido.') }}</flux:text>
+                <flux:text class="text-sm">{{ __('Salas de atendimento. Após encaminhar do guichê, a senha só aparece na fila do consultório escolhido.') }}</flux:text>
                 <ul class="list-disc space-y-1 ps-4 text-sm text-zinc-600 dark:text-zinc-400">
                     <li><strong>{{ __('Serviços permitidos') }}</strong> — {{ __('opcional; se vazio, aceita qualquer serviço da mesma ala.') }}</li>
-                    <li><strong>{{ __('Operador') }}</strong> — {{ __('use o modo Consultório no topo da tela para chamar senhas encaminhadas.') }}</li>
+                    <li><strong>{{ __('Médico vinculado') }}</strong> — {{ __('cadastre em Médicos e associe ao consultório.') }}</li>
                 </ul>
+            </li>
+            <li class="space-y-2">
+                <flux:heading size="sm">
+                    <a href="{{ route('admin.medicos') }}" class="text-blue-600 hover:underline dark:text-blue-400" wire:navigate>{{ __('Médicos') }}</a>
+                </flux:heading>
+                <flux:text class="text-sm">{{ __('Cada médico precisa de consultório ativo para acessar o sistema. Atende apenas a fila encaminhada ao seu consultório.') }}</flux:text>
+            </li>
+            <li class="space-y-2">
+                <flux:heading size="sm">
+                    <a href="{{ route('admin.operadores') }}" class="text-blue-600 hover:underline dark:text-blue-400" wire:navigate>{{ __('Operadores') }}</a>
+                </flux:heading>
+                <flux:text class="text-sm">{{ __('Equipe da recepção e triagem. Acesso com CPF e senha cadastrados.') }}</flux:text>
             </li>
             <li class="space-y-2">
                 <flux:heading size="sm">
@@ -145,10 +154,16 @@
             <li class="space-y-2">
                 <flux:heading size="sm">{{ __('Dispositivos') }}</flux:heading>
                 <ul class="list-disc space-y-1 ps-4 text-sm text-zinc-600 dark:text-zinc-400">
-                    <li>{{ __('Totem: tablet/PC na entrada — abra') }} <a href="{{ route('totem') }}" target="_blank" class="text-blue-600 underline">{{ route('totem') }}</a> {{ __('em tela cheia (F11).') }}</li>
-                    <li>{{ __('Painel TV: monitor na sala de espera — abra') }} <a href="{{ route('painel') }}" target="_blank" class="text-blue-600 underline">{{ route('painel') }}</a> {{ __('e selecione a ala, se aplicável.') }}</li>
-                    <li>{{ __('Operador: estação de cada atendente — login em') }} <a href="{{ route('operador.login') }}" class="text-blue-600 underline">{{ __('Operador') }}</a>.</li>
+                    <li>{{ __('Totem: tablet ou PC na entrada — abra o Totem em tela cheia (F11).') }}</li>
+                    <li>{{ __('Painel TV: um monitor por ala, se necessário — selecione a ala no painel e clique em Iniciar painel para habilitar o aviso por voz.') }}</li>
+                    <li>{{ __('Operador e Médico: estações com login individual.') }}</li>
                 </ul>
+                <div class="flex flex-wrap gap-3 pt-2">
+                    <flux:button :href="route('totem')" target="_blank" size="sm">{{ __('Abrir Totem') }}</flux:button>
+                    <flux:button :href="route('painel')" target="_blank" size="sm">{{ __('Abrir Painel TV') }}</flux:button>
+                    <flux:button :href="route('operador.login')" size="sm" wire:navigate>{{ __('Operador') }}</flux:button>
+                    <flux:button :href="route('medico.login')" size="sm" wire:navigate>{{ __('Médico') }}</flux:button>
+                </div>
             </li>
         </ol>
     </article>
@@ -164,38 +179,41 @@
                     <br><strong>2.</strong> {{ __('Escolhe o serviço (Triagem, Coleta…).') }}
                     <br><strong>3.</strong> {{ __('Recebe o ticket com código, posição na fila e espera estimada.') }}
                 </flux:text>
-                <flux:text class="text-sm text-zinc-500">
-                    {{ __('Por quê prioridade antes do serviço? A lei exige fila preferencial; o sistema marca a senha e posiciona na fila corretamente antes de calcular a espera.') }}
-                </flux:text>
             </flux:card>
 
             <flux:card class="space-y-3">
                 <flux:heading size="sm">{{ __('Operador — atendimento') }}</flux:heading>
                 <flux:text class="text-sm">
-                    <strong>{{ __('Meu guichê / Serviço') }}</strong> — {{ __('define de onde e qual fila você chama. Troque o serviço se atender outro setor no mesmo guichê.') }}
-                    <br><strong>{{ __('Chamar próxima') }}</strong> — {{ __('aplica intercalação, remove da fila, mostra no Painel e inicia cronômetro.') }}
-                    <br><strong>{{ __('Rechamar') }}</strong> — {{ __('repete a exibição no Painel (paciente não ouviu).') }}
-                    <br><strong>{{ __('Finalizar') }}</strong> — {{ __('encerra atendimento com sucesso; conta nas estatísticas.') }}
-                    <br><strong>{{ __('Ausente') }}</strong> — {{ __('paciente não compareceu; libera o operador sem contar como atendido.') }}
-                    <br><strong>{{ __('Transferir') }}</strong> — {{ __('envia a senha para outra fila (ex: Triagem → Coleta) mantendo prioridade.') }}
-                </flux:text>
-                <flux:text class="text-sm text-zinc-500">
-                    {{ __('Filtros da fila (Todos / Preferencial / Normal / Agendado) só alteram a visualização; a chamada sempre segue a regra de intercalação.') }}
+                    <strong>{{ __('Meu guichê / Serviço') }}</strong> — {{ __('define de onde e qual fila você chama.') }}
+                    <br><strong>{{ __('Chamar próxima') }}</strong> — {{ __('aplica intercalação e exibe no Painel.') }}
+                    <br><strong>{{ __('Rechamar') }}</strong> — {{ __('repete a exibição no Painel.') }}
+                    <br><strong>{{ __('Finalizar') }}</strong> — {{ __('encerra atendimento com sucesso.') }}
+                    <br><strong>{{ __('Ausente') }}</strong> — {{ __('paciente não compareceu.') }}
+                    <br><strong>{{ __('Transferir') }}</strong> — {{ __('envia a senha para outra fila mantendo prioridade.') }}
+                    <br><strong>{{ __('Encaminhar') }}</strong> — {{ __('envia ao consultório com nome do paciente.') }}
+                    <br><strong>{{ __('Modo Guichê / Consultório') }}</strong> — {{ __('alterna entre recepção e consultório.') }}
                 </flux:text>
             </flux:card>
 
             <flux:card class="space-y-3">
                 <flux:heading size="sm">{{ __('Painel TV') }}</flux:heading>
                 <flux:text class="text-sm">
-                    {{ __('Atualiza a cada poucos segundos. Mostra a última senha chamada, guichê, histórico recente e resumo das filas. O seletor de') }}
-                    <strong>{{ __('Ala') }}</strong> {{ __('limita os serviços exibidos quando a clínica tem vários setores físicos.') }}
+                    {{ __('Atualiza automaticamente ao chamar senhas. Mostra a última chamada, guichê ou consultório, histórico e filas. Selecione a') }}
+                    <strong>{{ __('Ala') }}</strong> {{ __('para que cada TV exiba apenas o setor desejado. Com nome do paciente informado, o painel anuncia por voz consultório e paciente; caso contrário, anuncia senha e destino.') }}
+                </flux:text>
+            </flux:card>
+
+            <flux:card class="space-y-3">
+                <flux:heading size="sm">{{ __('Médico — consultório') }}</flux:heading>
+                <flux:text class="text-sm">
+                    {{ __('Acesso com CPF. Vê apenas a fila do consultório vinculado. Chama, rechama, finaliza e marca ausente.') }}
                 </flux:text>
             </flux:card>
 
             <flux:card class="space-y-3">
                 <flux:heading size="sm">{{ __('Dashboard') }}</flux:heading>
                 <flux:text class="text-sm">
-                    {{ __('KPIs do dia: total de senhas, tempo médio configurado, quantos aguardam agora, ausentes, guichês ativos. Use para supervisão; gráficos detalhados ficam em Relatórios.') }}
+                    {{ __('Indicadores do dia: total de senhas, filas aguardando, ausentes e guichês ativos. Relatórios detalhados ficam em Administração → Relatórios.') }}
                 </flux:text>
             </flux:card>
         </div>
@@ -215,9 +233,9 @@
                 </thead>
                 <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                     <tr>
-                        <td class="py-3 pe-4 font-medium">{{ __('Relatórios') }}</td>
-                        <td class="py-3 pe-4 text-zinc-600 dark:text-zinc-400">{{ __('Análise histórica, exportação') }}</td>
-                        <td class="py-3 text-zinc-600 dark:text-zinc-400">{{ __('Período e serviço para comparar desempenho') }}</td>
+                        <td class="py-3 pe-4 font-medium">{{ __('Alas') }}</td>
+                        <td class="py-3 pe-4 text-zinc-600 dark:text-zinc-400">{{ __('Novo setor físico ou reorganização') }}</td>
+                        <td class="py-3 text-zinc-600 dark:text-zinc-400">{{ __('Marcar ala de consultório quando houver salas médicas') }}</td>
                     </tr>
                     <tr>
                         <td class="py-3 pe-4 font-medium">{{ __('Serviços') }}</td>
@@ -230,14 +248,29 @@
                         <td class="py-3 text-zinc-600 dark:text-zinc-400">{{ __('Numeração alinhada à placa física') }}</td>
                     </tr>
                     <tr>
+                        <td class="py-3 pe-4 font-medium">{{ __('Consultórios') }}</td>
+                        <td class="py-3 pe-4 text-zinc-600 dark:text-zinc-400">{{ __('Nova sala de atendimento') }}</td>
+                        <td class="py-3 text-zinc-600 dark:text-zinc-400">{{ __('Vincular médico e serviços permitidos') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-3 pe-4 font-medium">{{ __('Médicos') }}</td>
+                        <td class="py-3 pe-4 text-zinc-600 dark:text-zinc-400">{{ __('Profissional que atende no consultório') }}</td>
+                        <td class="py-3 text-zinc-600 dark:text-zinc-400">{{ __('CPF único e consultório ativo') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-3 pe-4 font-medium">{{ __('Operadores') }}</td>
+                        <td class="py-3 pe-4 text-zinc-600 dark:text-zinc-400">{{ __('Equipe da recepção/triagem') }}</td>
+                        <td class="py-3 text-zinc-600 dark:text-zinc-400">{{ __('CPF e senha de acesso') }}</td>
+                    </tr>
+                    <tr>
                         <td class="py-3 pe-4 font-medium">{{ __('Intercalação') }}</td>
                         <td class="py-3 pe-4 text-zinc-600 dark:text-zinc-400">{{ __('Fila mista normal + preferencial') }}</td>
                         <td class="py-3 text-zinc-600 dark:text-zinc-400">{{ __('Proporção legal (ex: 2:1)') }}</td>
                     </tr>
                     <tr>
-                        <td class="py-3 pe-4 font-medium">{{ __('Notificações') }}</td>
-                        <td class="py-3 pe-4 text-zinc-600 dark:text-zinc-400">{{ __('Reduzir abandono na fila') }}</td>
-                        <td class="py-3 text-zinc-600 dark:text-zinc-400">{{ __('Provedor + quantas senhas antes do aviso') }}</td>
+                        <td class="py-3 pe-4 font-medium">{{ __('Relatórios') }}</td>
+                        <td class="py-3 pe-4 text-zinc-600 dark:text-zinc-400">{{ __('Análise histórica') }}</td>
+                        <td class="py-3 text-zinc-600 dark:text-zinc-400">{{ __('Período e serviço para comparar desempenho') }}</td>
                     </tr>
                     <tr>
                         <td class="py-3 pe-4 font-medium">{{ __('Configurações') }}</td>
@@ -255,10 +288,7 @@
         <flux:card class="space-y-2">
             <flux:heading size="sm">{{ __('Intercalação (ex: 2 normais : 1 preferencial)') }}</flux:heading>
             <flux:text class="text-sm">
-                {{ __('A cada chamada, o sistema olha a posição no ciclo. Nos slots “normais”, chama o primeiro normal da fila; nos slots “preferenciais”, o primeiro preferencial. Se um tipo acabar, chama o outro — a fila nunca trava.') }}
-            </flux:text>
-            <flux:text class="text-sm text-zinc-500">
-                {{ __('Por quê não chamar sempre o preferencial primeiro? Para equilibrar fluxo e cumprir a proporção definida pela clínica conforme a Lei do Idoso e boas práticas de acessibilidade.') }}
+                {{ __('A cada chamada, o sistema alterna entre senhas normais e preferenciais conforme a proporção configurada. Se um tipo acabar, chama o outro — a fila nunca trava.') }}
             </flux:text>
         </flux:card>
 
@@ -272,21 +302,17 @@
         <flux:card class="space-y-2">
             <flux:heading size="sm">{{ __('Estimativa de espera') }}</flux:heading>
             <flux:text class="text-sm">
-                {{ __('posição × tempo médio do serviço. É uma aproximação — se os atendimentos atrasarem, a espera real pode ser maior. Ajuste o tempo médio nos serviços conforme a operação.') }}
+                {{ __('Calculada pela posição na fila e pelo tempo médio do serviço. É uma aproximação — ajuste o tempo médio conforme a operação real.') }}
             </flux:text>
         </flux:card>
     </article>
 
     <article id="manutencao" class="scroll-mt-8 space-y-4">
-        <flux:heading size="lg">7. {{ __('Manutenção e agendamentos') }}</flux:heading>
+        <flux:heading size="lg">7. {{ __('Agendamentos e rotina') }}</flux:heading>
         <flux:card class="space-y-3">
             <flux:heading size="sm">{{ __('Agendamentos na fila') }}</flux:heading>
             <flux:text class="text-sm">
-                {{ __('Consultas marcadas podem entrar automaticamente na fila cerca de 15 minutos antes do horário. O comando roda a cada minuto:') }}
-            </flux:text>
-            <pre class="overflow-x-auto rounded-lg bg-zinc-100 p-3 text-xs dark:bg-zinc-800">php artisan fila:integrar-agendamentos</pre>
-            <flux:text class="text-sm text-zinc-500">
-                {{ __('Em produção, configure o scheduler do Laravel (`* * * * * php artisan schedule:run`). Sem isso, apenas senhas emitidas no Totem entram na fila.') }}
+                {{ __('Consultas marcadas podem entrar automaticamente na fila cerca de 15 minutos antes do horário, quando essa integração estiver ativa na clínica. Sem agendamentos integrados, apenas senhas emitidas no Totem entram na fila.') }}
             </flux:text>
         </flux:card>
         <flux:card class="space-y-2">
@@ -301,15 +327,15 @@
         <flux:heading size="lg">8. {{ __('Checklist de implantação') }}</flux:heading>
         <flux:card>
             <ul class="space-y-2 text-sm">
-                <li class="flex gap-2"><span>☐</span> {{ __('Migrations e seed executados') }}</li>
+                <li class="flex gap-2"><span>☐</span> {{ __('Alas cadastradas (consultório marcado onde aplicável)') }}</li>
                 <li class="flex gap-2"><span>☐</span> {{ __('Configurações da clínica salvas (nome, horários, ticker)') }}</li>
-                <li class="flex gap-2"><span>☐</span> {{ __('Todos os serviços cadastrados com prefixo e tempo médio') }}</li>
-                <li class="flex gap-2"><span>☐</span> {{ __('Guichês numerados conforme o layout físico') }}</li>
-                <li class="flex gap-2"><span>☐</span> {{ __('Intercalação definida (ex: 2:1) em cada serviço com preferencial') }}</li>
+                <li class="flex gap-2"><span>☐</span> {{ __('Serviços, guichês, consultórios e médicos cadastrados') }}</li>
+                <li class="flex gap-2"><span>☐</span> {{ __('Operadores cadastrados e treinados') }}</li>
+                <li class="flex gap-2"><span>☐</span> {{ __('Intercalação definida em cada serviço com preferencial') }}</li>
                 <li class="flex gap-2"><span>☐</span> {{ __('Totem e Painel abertos nos dispositivos corretos') }}</li>
-                <li class="flex gap-2"><span>☐</span> {{ __('Operadores treinados (chamar, ausente, transferir)') }}</li>
-                <li class="flex gap-2"><span>☐</span> {{ __('Scheduler ativo se usar agendamentos') }}</li>
-                <li class="flex gap-2"><span>☐</span> {{ __('Teste completo: emitir senha → chamar → ver no Painel → finalizar') }}</li>
+                <li class="flex gap-2"><span>☐</span> {{ __('Painel com ala correta e voz habilitada (Iniciar painel)') }}</li>
+                <li class="flex gap-2"><span>☐</span> {{ __('Teste: emitir senha → chamar → ver no Painel → finalizar') }}</li>
+                <li class="flex gap-2"><span>☐</span> {{ __('Teste consultório: encaminhar com paciente → chamar → painel anuncia') }}</li>
             </ul>
         </flux:card>
         <div class="flex flex-wrap gap-3">

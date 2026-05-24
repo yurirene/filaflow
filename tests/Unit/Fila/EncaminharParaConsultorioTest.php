@@ -139,7 +139,7 @@ class EncaminharParaConsultorioTest extends TestCase
         app(EncaminharParaConsultorio::class)->execute($encaminhada, $servico->id, $consultorio->id, 'João Pereira');
 
         $antes = Senha::query()->filaGuiche($servico->id)->count();
-        $resultado = app(ChamarProximaSenha::class)->execute($servico->id, $guiche->id, 1);
+        $resultado = app(ChamarProximaSenha::class)->execute($guiche->id, $servico->id, 1);
 
         $this->assertNotSame($encaminhada->id, $resultado['senha']->id);
         $this->assertSame($antes - 1, Senha::query()->filaGuiche($servico->id)->count());

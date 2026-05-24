@@ -36,9 +36,15 @@ class Painel extends Component
         $this->refreshPainel();
     }
 
-    public function onSenhaChamada(): void
+    public function onSenhaChamada(?int $alaId = null): void
     {
-        $this->refreshPainel();
+        if ($this->ala !== 'all' && $alaId !== null && (int) $this->ala !== $alaId) {
+            return;
+        }
+
+        unset($this->painelData);
+
+        $this->dispararAlertaPainel(forcar: true);
     }
 
     public function refreshPainel(): void
@@ -46,11 +52,29 @@ class Painel extends Component
         unset($this->painelData);
 
         $alaId = $this->ala === 'all' ? null : (int) $this->ala;
-        $codigo = app(PainelQuery::class)->painelAtual($alaId)['codigo'];
-        if ($codigo !== $this->lastCodigo && $codigo !== '---') {
-            $this->lastCodigo = $codigo;
-            $this->dispatch('painel-alert');
+        $painelAtual = app(PainelQuery::class)->painelAtual($alaId);
+
+        if ($painelAtual['codigo'] !== $this->lastCodigo && $painelAtual['codigo'] !== '---') {
+            $this->dispararAlertaPainel($painelAtual);
         }
+    }
+
+    /** @param array{tipo: string, codigo: string, servico: string, local: string, paciente?: string|null}|null $painelAtual */
+    protected function dispararAlertaPainel(?array $painelAtual = null, bool $forcar = false): void
+    {
+        $alaId = $this->ala === 'all' ? null : (int) $this->ala;
+        $painelAtual ??= app(PainelQuery::class)->painelAtual($alaId);
+
+        if ($painelAtual['codigo'] === '---') {
+            return;
+        }
+
+        if (! $forcar && $painelAtual['codigo'] === $this->lastCodigo) {
+            return;
+        }
+
+        $this->lastCodigo = $painelAtual['codigo'];
+        $this->dispatch('painel-alert', painel: $painelAtual);
     }
 
     public function updatedAla(): void

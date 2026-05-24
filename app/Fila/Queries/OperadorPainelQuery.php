@@ -84,16 +84,22 @@ class OperadorPainelQuery
     }
 
     /** @return Collection<int, Senha> */
-    public function filaAguardandoGuiche(int $servicoId): Collection
+    public function filaAguardandoGuiche(Guiche $guiche, ?int $servicoId = null): Collection
     {
-        return Senha::query()
+        $query = Senha::query()
             ->with('servico')
             ->aguardando()
-            ->where('servico_id', $servicoId)
             ->whereNull('consultorio_id')
             ->orderBy('ordem_fila')
-            ->orderBy('emitida_em')
-            ->get();
+            ->orderBy('emitida_em');
+
+        if ($servicoId) {
+            $query->where('servico_id', $servicoId);
+        } else {
+            $query->whereIn('servico_id', $this->servicosDoGuiche($guiche)->pluck('id'));
+        }
+
+        return $query->get();
     }
 
     /** @return Collection<int, Senha> */
@@ -111,6 +117,27 @@ class OperadorPainelQuery
         }
 
         return $query->get();
+    }
+
+    /** @return Collection<int, Guiche> */
+    public function guichesAtivos(): Collection
+    {
+        return Guiche::query()
+            ->with('ala')
+            ->where('ativo', true)
+            ->orderBy('ala_id')
+            ->orderBy('numero')
+            ->get();
+    }
+
+    /** @return Collection<int, Servico> */
+    public function servicosDoGuiche(Guiche $guiche): Collection
+    {
+        return Servico::query()
+            ->where('ala_id', $guiche->ala_id)
+            ->where('ativo', true)
+            ->orderBy('nome')
+            ->get();
     }
 
     /** @return Collection<int, Guiche> */

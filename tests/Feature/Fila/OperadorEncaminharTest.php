@@ -36,7 +36,7 @@ class OperadorEncaminharTest extends TestCase
 
         $this->actingAs($operador, 'operador');
 
-        $resultado = app(ChamarProximaSenha::class)->execute($servico->id, $guiche->id, $operador->id);
+        $resultado = app(ChamarProximaSenha::class)->execute($guiche->id, $servico->id, $operador->id);
         $senha = $resultado['senha'];
 
         app(EncaminharParaConsultorio::class)->execute($senha, $servico->id, $consultorio->id, 'Ana Costa Lima');

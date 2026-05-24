@@ -1,3 +1,21 @@
+function eventoAlaMatchesPainel(component, marker, eventAlaId) {
+    if (! marker.dataset.filterAla) {
+        return true;
+    }
+
+    const painelAla = component.$wire.get('ala');
+
+    if (painelAla === 'all') {
+        return true;
+    }
+
+    if (eventAlaId == null) {
+        return true;
+    }
+
+    return String(eventAlaId) === String(painelAla);
+}
+
 function bindFilaEcho(component) {
     if (! window.Echo) {
         return;
@@ -19,7 +37,13 @@ function bindFilaEcho(component) {
     channel.listen('.fila.atualizada', () => component.$wire.call(onFila));
 
     if (onSenha) {
-        channel.listen('.senha.chamada', () => component.$wire.call(onSenha));
+        channel.listen('.senha.chamada', (event) => {
+            if (! eventoAlaMatchesPainel(component, marker, event.alaId)) {
+                return;
+            }
+
+            component.$wire.call(onSenha, event.alaId ?? null);
+        });
     }
 }
 

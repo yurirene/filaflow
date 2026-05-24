@@ -97,13 +97,11 @@ class OperadorSessao
         return $id !== null ? (int) $id : null;
     }
 
-    public static function setOperadorContext(int $guicheNumero, int $servicoId): void
+    public static function setOperadorContext(int $guicheId, ?int $servicoId = null): void
     {
-        $guiche = Guiche::query()->where('numero', $guicheNumero)->first();
-
         self::merge([
             'modo' => self::MODO_GUICHE,
-            'guiche_id' => $guiche?->id,
+            'guiche_id' => $guicheId,
             'servico_id' => $servicoId,
         ]);
     }

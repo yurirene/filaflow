@@ -46,7 +46,9 @@ class Operador extends Component
 
     public string $queueFilter = 'all';
 
-    public int $guiche = 3;
+    public ?int $guicheId = null;
+
+    public ?int $guiche = null;
 
     public string $servico = '';
 
@@ -76,26 +78,47 @@ class Operador extends Component
     {
         $this->modo = OperadorSessao::modo();
         $this->queueFilter = OperadorSessao::queueFilter();
-        $this->guiche = OperadorSessao::guicheNumero();
         $this->timerSegundos = OperadorSessao::timerSegundos();
 
-        $servicoId = OperadorSessao::servicoId()
-            ?? Servico::query()->where('ativo', true)->orderBy('nome')->value('id');
+        $this->guicheId = OperadorSessao::guicheId()
+            ?? app(OperadorPainelQuery::class)->guichesAtivos()->first()?->id;
 
-        $this->servico = (string) ($servicoId ?? '');
-        $this->transferServico = $this->servico;
+        $guicheModel = $this->guicheId
+            ? Guiche::query()->with('servicoPadrao')->find($this->guicheId)
+            : null;
+
+        if ($guicheModel && ! $guicheModel->ativo) {
+            $guicheModel = app(OperadorPainelQuery::class)->guichesAtivos()->first();
+            $this->guicheId = $guicheModel?->id;
+        }
+
+        $servicosDaAla = $guicheModel
+            ? app(OperadorPainelQuery::class)->servicosDoGuiche($guicheModel)
+            : collect();
+
+        $servicoId = OperadorSessao::servicoId();
+        if ($servicoId && $servicosDaAla->contains('id', $servicoId)) {
+            $this->servico = (string) $servicoId;
+        } else {
+            $this->aplicarServicoPadraoGuiche($guicheModel, $servicosDaAla);
+        }
+
+        $this->transferServico = $this->servico ?: (string) ($servicosDaAla->first()?->id ?? '');
 
         $consultorioId = OperadorSessao::consultorioId()
             ?? Consultorio::query()->where('ativo', true)->orderBy('numero')->value('id');
 
         $this->consultorio = (string) ($consultorioId ?? '');
 
-        if ($this->modo === OperadorSessao::MODO_GUICHE && $servicoId && ! OperadorSessao::guicheId()) {
-            OperadorSessao::setOperadorContext($this->guiche, $servicoId);
+        if ($this->modo === OperadorSessao::MODO_GUICHE && $this->guicheId) {
+            OperadorSessao::setOperadorContext(
+                $this->guicheId,
+                $this->servico ? (int) $this->servico : null,
+            );
         }
 
         if ($this->modo === OperadorSessao::MODO_CONSULTORIO && $consultorioId) {
-            OperadorSessao::setConsultorioContext($consultorioId, $servicoId ?: null);
+            OperadorSessao::setConsultorioContext($consultorioId, $this->servico ? (int) $this->servico : null);
         }
     }
 
@@ -118,19 +141,51 @@ class Operador extends Component
             return app(OperadorPainelQuery::class)->filaAguardandoConsultorio((int) $this->consultorio, $servicoId);
         }
 
-        if (! $this->servico) {
+        $guiche = $this->guicheAtualModel;
+        if (! $guiche) {
             return collect();
         }
 
-        return app(OperadorPainelQuery::class)->filaAguardandoGuiche((int) $this->servico);
+        $servicoId = $this->servico ? (int) $this->servico : null;
+
+        return app(OperadorPainelQuery::class)->filaAguardandoGuiche($guiche, $servicoId);
+    }
+
+    #[Computed]
+    public function guicheAtualModel(): ?Guiche
+    {
+        if (! $this->guicheId) {
+            return null;
+        }
+
+        return Guiche::query()
+            ->with(['ala', 'servicoPadrao'])
+            ->where('id', $this->guicheId)
+            ->where('ativo', true)
+            ->first();
+    }
+
+    /** @return Collection<int, Servico> */
+    #[Computed]
+    public function servicosGuiche(): Collection
+    {
+        $guiche = $this->guicheAtualModel;
+        if (! $guiche) {
+            return collect();
+        }
+
+        return app(OperadorPainelQuery::class)->servicosDoGuiche($guiche);
     }
 
     #[Computed]
     public function guichesDaAlaAtual(): Collection
     {
-        $servico = Servico::query()->find((int) $this->servico);
+        $guiche = $this->guicheAtualModel;
+        if (! $guiche) {
+            return app(OperadorPainelQuery::class)->guichesAtivos();
+        }
 
-        return app(OperadorPainelQuery::class)->guichesDaAla($servico?->ala_id);
+        return app(OperadorPainelQuery::class)->guichesDaAla($guiche->ala_id);
     }
 
     #[Computed]
@@ -203,8 +258,11 @@ class Operador extends Component
         $this->modo = $modo;
         OperadorSessao::setModo($modo);
 
-        if ($modo === OperadorSessao::MODO_GUICHE && $this->servico) {
-            OperadorSessao::setOperadorContext($this->guiche, (int) $this->servico);
+        if ($modo === OperadorSessao::MODO_GUICHE && $this->guicheId) {
+            OperadorSessao::setOperadorContext(
+                $this->guicheId,
+                $this->servico ? (int) $this->servico : null,
+            );
         }
 
         if ($modo === OperadorSessao::MODO_CONSULTORIO && $this->consultorio) {
@@ -217,26 +275,59 @@ class Operador extends Component
         $this->invalidateOperadorComputeds();
     }
 
-    public function updatedGuiche(int $guiche): void
+    public function hydrate(): void
     {
-        if ($this->servico && $this->modo === OperadorSessao::MODO_GUICHE) {
-            OperadorSessao::setOperadorContext($guiche, (int) $this->servico);
+        $this->migrarGuicheLegado();
+    }
+
+    public function updatedGuiche(?int $guiche): void
+    {
+        if ($guiche === null || $this->modo !== OperadorSessao::MODO_GUICHE) {
+            return;
         }
+
+        $guicheModel = $this->resolverGuichePorNumero($guiche);
+        if (! $guicheModel) {
+            return;
+        }
+
+        $this->guicheId = $guicheModel->id;
+        $this->guiche = null;
+        $this->updatedGuicheId($this->guicheId);
+    }
+
+    public function updatedGuicheId(?int $guicheId): void
+    {
+        if ($this->modo !== OperadorSessao::MODO_GUICHE || ! $guicheId) {
+            $this->invalidateOperadorComputeds();
+
+            return;
+        }
+
+        unset($this->guicheAtualModel, $this->servicosGuiche, $this->guichesDaAlaAtual);
+
+        $guicheModel = $this->guicheAtualModel;
+        $this->aplicarServicoPadraoGuiche($guicheModel, $this->servicosGuiche);
+
+        OperadorSessao::setOperadorContext(
+            $guicheId,
+            $this->servico ? (int) $this->servico : null,
+        );
+
         $this->invalidateOperadorComputeds();
     }
 
     public function updatedServico(string $servico): void
     {
-        if ($this->modo === OperadorSessao::MODO_GUICHE) {
-            $servicoModel = Servico::query()->find((int) $servico);
-            $numeros = app(OperadorPainelQuery::class)->guichesDaAla($servicoModel?->ala_id)->pluck('numero');
+        if ($this->modo === OperadorSessao::MODO_GUICHE && $this->guicheId) {
+            OperadorSessao::setOperadorContext(
+                $this->guicheId,
+                $servico ? (int) $servico : null,
+            );
 
-            if ($numeros->isNotEmpty() && ! $numeros->contains($this->guiche)) {
-                $this->guiche = $numeros->first();
+            if ($servico) {
+                $this->transferServico = $servico;
             }
-
-            OperadorSessao::setOperadorContext($this->guiche, (int) $servico);
-            $this->transferServico = $servico;
         }
 
         if ($this->modo === OperadorSessao::MODO_CONSULTORIO && $this->consultorio) {
@@ -378,10 +469,11 @@ class Operador extends Component
                 return;
             }
 
-            $guiche = Guiche::query()->where('numero', $this->guiche)->first()
+            $guiche = $this->guicheAtualModel
                 ?? throw FilaException::guicheInvalido();
 
-            $resultado = $chamarGuiche->execute((int) $this->servico, $guiche->id);
+            $servicoId = $this->servico ? (int) $this->servico : null;
+            $resultado = $chamarGuiche->execute($guiche->id, $servicoId);
 
             $senha = $resultado['senha'];
             $svc = $resultado['servico'];
@@ -586,7 +678,17 @@ class Operador extends Component
     #[Computed]
     public function servicoAtualNome(): string
     {
-        return $this->operadorPainel['servicos']->firstWhere('id', (int) $this->servico)?->nome ?? '—';
+        if (! $this->servico) {
+            return $this->modo === OperadorSessao::MODO_GUICHE
+                ? __('Todos da fila')
+                : '—';
+        }
+
+        $servicos = $this->modo === OperadorSessao::MODO_GUICHE
+            ? $this->servicosGuiche
+            : $this->operadorPainel['servicos'];
+
+        return $servicos->firstWhere('id', (int) $this->servico)?->nome ?? '—';
     }
 
     #[Computed]
@@ -677,6 +779,58 @@ class Operador extends Component
         return $this->timerSegundos;
     }
 
+    protected function aplicarServicoPadraoGuiche(?Guiche $guiche, Collection $servicos): void
+    {
+        if ($guiche?->servico_padrao_id && $servicos->contains('id', $guiche->servico_padrao_id)) {
+            $this->servico = (string) $guiche->servico_padrao_id;
+
+            return;
+        }
+
+        $this->servico = '';
+    }
+
+    protected function migrarGuicheLegado(): void
+    {
+        if ($this->guicheId || ! $this->guiche) {
+            return;
+        }
+
+        $guicheModel = $this->resolverGuichePorNumero($this->guiche);
+        if ($guicheModel) {
+            $this->guicheId = $guicheModel->id;
+        }
+
+        $this->guiche = null;
+    }
+
+    protected function resolverGuichePorNumero(int $numero): ?Guiche
+    {
+        $alaId = $this->guicheId
+            ? Guiche::query()->whereKey($this->guicheId)->value('ala_id')
+            : (OperadorSessao::guicheId()
+                ? Guiche::query()->whereKey(OperadorSessao::guicheId())->value('ala_id')
+                : null);
+
+        if ($alaId) {
+            $guiche = Guiche::query()
+                ->where('ala_id', $alaId)
+                ->where('numero', $numero)
+                ->where('ativo', true)
+                ->first();
+
+            if ($guiche) {
+                return $guiche;
+            }
+        }
+
+        return Guiche::query()
+            ->where('numero', $numero)
+            ->where('ativo', true)
+            ->orderBy('id')
+            ->first();
+    }
+
     protected function invalidateOperadorComputeds(): void
     {
         unset(
@@ -691,6 +845,9 @@ class Operador extends Component
             $this->servicosEncaminhar,
             $this->servicosTransferir,
             $this->servicosConsultorio,
+            $this->servicosGuiche,
+            $this->guicheAtualModel,
+            $this->guichesDaAlaAtual,
         );
     }
 

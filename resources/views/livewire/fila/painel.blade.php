@@ -3,8 +3,67 @@
     $empresa = $data['empresa'];
     $painelAtual = $data['painelAtual'];
 @endphp
-<div class="view active">
-    <x-fila.echo-listener on-fila="onFilaAtualizada" on-senha="onSenhaChamada" />
+<div
+    class="view active"
+    x-data="{
+        speechSupported: false,
+        unlocked: false,
+        unlocking: false,
+        unlockError: false,
+        init() {
+            this.speechSupported = window.filaflowIsSpeechSupported?.() ?? false;
+            this.unlocked = ! this.speechSupported || (window.filaflowIsPainelSpeechUnlocked?.() ?? false);
+        },
+        async iniciarPainel() {
+            if (! this.speechSupported || this.unlocked || this.unlocking) {
+                return;
+            }
+            this.unlocking = true;
+            this.unlockError = false;
+            try {
+                await window.filaflowUnlockPainelSpeech();
+                this.unlocked = true;
+            } catch {
+                this.unlockError = true;
+            } finally {
+                this.unlocking = false;
+            }
+        },
+    }"
+>
+    <div
+        x-show="speechSupported && ! unlocked"
+        x-cloak
+        class="painel-speech-unlock"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="painel-speech-unlock-title"
+    >
+        <div class="painel-speech-unlock-card">
+            <span class="painel-speech-unlock-icon" aria-hidden="true">🔊</span>
+            <h2 id="painel-speech-unlock-title" class="painel-speech-unlock-title">{{ __('Ativar painel de chamadas') }}</h2>
+            <p class="painel-speech-unlock-text">
+                {{ __('Toque no botão abaixo para habilitar os avisos por voz neste dispositivo. Necessário apenas uma vez por sessão do navegador.') }}
+            </p>
+            <button
+                type="button"
+                class="painel-speech-unlock-btn"
+                x-on:click="iniciarPainel()"
+                x-bind:disabled="unlocking"
+            >
+                <span x-show="! unlocking">{{ __('Iniciar painel') }}</span>
+                <span x-show="unlocking">{{ __('Ativando...') }}</span>
+            </button>
+            <p x-show="unlockError" class="painel-speech-unlock-error" role="alert">
+                {{ __('Não foi possível ativar o áudio. Verifique o volume do dispositivo e tente novamente.') }}
+            </p>
+            <p class="painel-speech-unlock-hint">
+                {{ __('TV dedicada: use o script') }} <code>scripts/painel-kiosk.sh</code> {{ __('com') }} <code>?auto_speech=1</code> {{ __('para pular esta tela.') }}
+            </p>
+        </div>
+    </div>
+
+    <x-fila.echo-listener on-fila="onFilaAtualizada" on-senha="onSenhaChamada" :filterAla="true" />
     <div class="painel-container">
         <div class="painel-header">
             <div class="painel-brand">
@@ -44,11 +103,30 @@
         <div class="painel-main">
             <div
                 class="painel-current"
-                x-data
-                x-on:painel-alert.window="$refs.ring.classList.remove('animate'); void $refs.ring.offsetWidth; $refs.ring.classList.add('animate'); setTimeout(() => $refs.ring.classList.remove('animate'), 4500)"
+                x-data="{
+                    alertRing() {
+                        this.$refs.ring.classList.remove('is-alerting');
+                        void this.$refs.ring.offsetWidth;
+                        this.$refs.ring.classList.add('is-alerting');
+                        setTimeout(() => this.$refs.ring.classList.remove('is-alerting'), 4500);
+
+                        const numberEl = this.$refs.currentNumber;
+                        if (numberEl) {
+                            numberEl.classList.remove('is-changing');
+                            void numberEl.offsetWidth;
+                            numberEl.classList.add('is-changing');
+                            setTimeout(() => numberEl.classList.remove('is-changing'), 300);
+                        }
+                    },
+                    onPainelAlert(event) {
+                        this.alertRing();
+                        window.filaflowPainelSpeech?.(event.detail?.painel);
+                    },
+                }"
+                x-on:painel-alert.window="onPainelAlert($event)"
             >
                 <div class="painel-current-label">{{ __('CHAMANDO AGORA') }}</div>
-                <div class="painel-current-number" wire:key="num-{{ $painelAtual['codigo'] }}">
+                <div class="painel-current-number" wire:key="num-{{ $painelAtual['codigo'] }}" x-ref="currentNumber">
                     {{ $painelAtual['codigo'] }}
                 </div>
                 <div class="painel-current-service">{{ $painelAtual['servico'] }}</div>
@@ -58,7 +136,7 @@
                     </span>
                     <span class="guiche-number">{{ $painelAtual['local'] ?? ($painelAtual['guiche'] ?? '--') }}</span>
                 </div>
-                @if ($painelAtual['tipo'] === 'consultorio')
+                @if ($painelAtual['tipo'] === 'consultorio' && ! empty($painelAtual['paciente']))
                     <div class="painel-current-service">{{ $painelAtual['paciente'] }}</div>
                 @endif
                 <div class="painel-alert-ring" x-ref="ring"></div>

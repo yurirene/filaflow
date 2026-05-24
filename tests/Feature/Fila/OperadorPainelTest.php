@@ -4,6 +4,7 @@ namespace Tests\Feature\Fila;
 
 use App\Fila\Enums\StatusOperador;
 use App\Livewire\Fila\Operador;
+use App\Models\Guiche;
 use App\Models\Operador as OperadorModel;
 use App\Models\Servico;
 use Database\Seeders\FilaSeeder;
@@ -23,14 +24,50 @@ class OperadorPainelTest extends TestCase
 
         $operador = OperadorModel::query()->where('cpf', '52998224725')->first();
         $servico = Servico::query()->where('prefixo', 'T')->first();
+        $guiche = Guiche::query()->where('ala_id', $servico->ala_id)->where('numero', 1)->first();
 
         $this->actingAs($operador, 'operador');
 
         Livewire::test(Operador::class)
+            ->set('guicheId', $guiche->id)
             ->set('servico', (string) $servico->id)
-            ->set('guiche', 1)
             ->call('chamarProxima')
             ->assertSet('temSenhaAtual', true);
+    }
+
+    #[Test]
+    public function operador_atualiza_servicos_ao_trocar_guiche(): void
+    {
+        $this->seed(FilaSeeder::class);
+
+        $operador = OperadorModel::query()->where('cpf', '52998224725')->first();
+        $guicheTriagem = Guiche::query()->where('numero', 3)->whereHas('ala', fn ($q) => $q->where('nome', 'Ala A — Recepção e Triagem'))->first();
+        $guicheCaixa = Guiche::query()->where('numero', 1)->whereHas('ala', fn ($q) => $q->where('nome', 'Ala D — Administrativo'))->first();
+
+        $this->actingAs($operador, 'operador');
+
+        Livewire::test(Operador::class)
+            ->set('guicheId', $guicheTriagem->id)
+            ->assertSet('servico', (string) $guicheTriagem->servico_padrao_id)
+            ->set('guicheId', $guicheCaixa->id)
+            ->assertSet('servico', (string) $guicheCaixa->servico_padrao_id)
+            ->assertSee('Caixa');
+    }
+
+    #[Test]
+    public function operador_migra_snapshot_legado_de_guiche(): void
+    {
+        $this->seed(FilaSeeder::class);
+
+        $operador = OperadorModel::query()->where('cpf', '52998224725')->first();
+        $guiche = Guiche::query()->where('numero', 3)->whereHas('ala', fn ($q) => $q->where('nome', 'Ala A — Recepção e Triagem'))->first();
+
+        $this->actingAs($operador, 'operador');
+
+        Livewire::test(Operador::class)
+            ->set('guicheId', null)
+            ->set('guiche', $guiche->numero)
+            ->assertSet('guicheId', $guiche->id);
     }
 
     #[Test]

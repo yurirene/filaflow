@@ -41,7 +41,7 @@
                     @if ($modo === 'consultorio')
                         <div class="op-guiche">{{ $this->consultorioAtualLabel }}</div>
                     @else
-                        <div class="op-guiche">{{ __('Guichê') }} <span>{{ str_pad((string) $guiche, 2, '0', STR_PAD_LEFT) }}</span></div>
+                        <div class="op-guiche">{{ __('Guichê') }} <span>{{ str_pad((string) ($this->guicheAtualModel?->numero ?? 0), 2, '0', STR_PAD_LEFT) }}</span></div>
                     @endif
                     <div class="op-service">{{ $this->servicoAtualNome }}</div>
                 </div>
@@ -65,17 +65,18 @@
             @if ($modo === 'guiche')
                 <div class="op-guiche-selector">
                     <label class="op-label">{{ __('Meu Guichê') }}</label>
-                    <select wire:model.live="guiche">
+                    <select wire:model.live="guicheId" wire:key="guiche-select-{{ $guicheId }}">
                         @foreach ($this->guichesDaAlaAtual as $g)
-                            <option value="{{ $g->numero }}">{{ __('Guichê') }} {{ str_pad((string) $g->numero, 2, '0', STR_PAD_LEFT) }}</option>
+                            <option value="{{ $g->id }}">{{ __('Guichê') }} {{ str_pad((string) $g->numero, 2, '0', STR_PAD_LEFT) }}</option>
                         @endforeach
                     </select>
                 </div>
 
                 <div class="op-service-selector">
                     <label class="op-label">{{ __('Serviço') }}</label>
-                    <select wire:model.live="servico">
-                        @foreach ($servicos as $svc)
+                    <select wire:model.live="servico" wire:key="servico-select-{{ $guicheId }}">
+                        <option value="">{{ __('Todos da fila') }}</option>
+                        @foreach ($this->servicosGuiche as $svc)
                             <option value="{{ $svc->id }}">{{ $svc->nome }}</option>
                         @endforeach
                     </select>
