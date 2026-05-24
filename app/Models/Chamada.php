@@ -14,6 +14,7 @@ class Chamada extends Model
         'guiche_id',
         'consultorio_id',
         'operador_id',
+        'medico_id',
         'chamada_em',
         'rechamada_vezes',
     ];
@@ -44,5 +45,10 @@ class Chamada extends Model
     public function operador(): BelongsTo
     {
         return $this->belongsTo(Operador::class);
+    }
+
+    public function medico(): BelongsTo
+    {
+        return $this->belongsTo(Medico::class);
     }
 }

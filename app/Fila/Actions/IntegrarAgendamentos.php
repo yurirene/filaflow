@@ -32,6 +32,7 @@ class IntegrarAgendamentos
                     prioridade: PrioridadeSenha::Normal,
                     pacienteCelular: $agendamento->paciente_celular,
                     isAgendado: true,
+                    pacienteNome: $agendamento->paciente_nome,
                 );
 
                 $agendamento->update(['status' => StatusAgendamento::NaFila]);

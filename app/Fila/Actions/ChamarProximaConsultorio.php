@@ -12,6 +12,7 @@ use App\Models\Consultorio;
 use App\Models\RegraIntercalacao;
 use App\Models\Senha;
 use App\Models\Servico;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -24,27 +25,36 @@ class ChamarProximaConsultorio
     /**
      * @return array{senha: Senha, chamada: Chamada, servico: Servico, consultorio: Consultorio}
      */
-    public function execute(int $consultorioId, ?int $servicoId = null, ?int $operadorId = null): array
-    {
+    public function execute(
+        int $consultorioId,
+        ?int $servicoId = null,
+        ?int $operadorId = null,
+        ?int $medicoId = null,
+    ): array {
         $operadorId ??= Auth::guard('operador')->id();
+        $medicoId ??= Auth::guard('medico')->id();
 
-        $consultorio = Consultorio::query()->with('ala')->where('id', $consultorioId)->where('ativo', true)->first()
+        $consultorio = Consultorio::query()
+            ->with(['ala', 'medico'])
+            ->where('id', $consultorioId)
+            ->where('ativo', true)
+            ->first()
             ?? throw FilaException::consultorioInvalido();
+
+        if ($medicoId !== null && (int) $consultorio->medico_id !== $medicoId) {
+            throw FilaException::consultorioInvalido();
+        }
 
         if ($servicoId) {
             $servico = Servico::query()->with('ala')->where('id', $servicoId)->where('ativo', true)->first()
                 ?? throw FilaException::servicoInativo();
-
-            if ($servico->ala_id !== $consultorio->ala_id) {
-                throw FilaException::consultorioAlaIncompativel();
-            }
 
             if (! $consultorio->aceitaServico($servico)) {
                 throw FilaException::servicoNaoPermitidoNoConsultorio();
             }
         }
 
-        return DB::transaction(function () use ($consultorio, $servicoId, $operadorId): array {
+        return DB::transaction(function () use ($consultorio, $servicoId, $operadorId, $medicoId): array {
             $query = Senha::query()
                 ->aguardando()
                 ->where('consultorio_id', $consultorio->id)
@@ -75,6 +85,7 @@ class ChamarProximaConsultorio
                 'senha_id' => $senha->id,
                 'consultorio_id' => $consultorio->id,
                 'operador_id' => $operadorId,
+                'medico_id' => $medicoId,
                 'chamada_em' => $agora,
             ]);
 
@@ -90,7 +101,8 @@ class ChamarProximaConsultorio
                 isPreferencial: $senha->is_preferencial,
                 ala: $servico->ala?->nome,
                 consultorio: $consultorio->numero,
-                responsavel: $consultorio->responsavel,
+                responsavel: $consultorio->medico?->nome,
+                alaId: $consultorio->ala_id,
             );
 
             FilaAtualizada::dispatch(
@@ -108,7 +120,7 @@ class ChamarProximaConsultorio
         });
     }
 
-    /** @param \Illuminate\Support\Collection<int, Senha> $fila */
+    /** @param Collection<int, Senha> $fila */
     protected function selecionarUmaFila($fila, int $servicoId): ?Senha
     {
         $subset = $fila->where('servico_id', $servicoId)->values();
@@ -127,7 +139,7 @@ class ChamarProximaConsultorio
         return $senha;
     }
 
-    /** @param \Illuminate\Support\Collection<int, Senha> $fila */
+    /** @param Collection<int, Senha> $fila */
     protected function selecionarMultiplasFilas($fila): ?Senha
     {
         if ($fila->isEmpty()) {

@@ -17,5 +17,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/operador.php';
+require __DIR__.'/medico.php';
 require __DIR__.'/admin.php';
 require __DIR__.'/settings.php';

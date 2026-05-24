@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RegraIntercalacao extends Model
 {
-
     public $timestamps = false;
 
     protected $table = 'regras_intercalacao';

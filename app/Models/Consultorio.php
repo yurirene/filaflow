@@ -11,8 +11,8 @@ class Consultorio extends Model
 {
     protected $fillable = [
         'ala_id',
+        'medico_id',
         'numero',
-        'responsavel',
         'ativo',
     ];
 
@@ -27,6 +27,11 @@ class Consultorio extends Model
     public function ala(): BelongsTo
     {
         return $this->belongsTo(Ala::class);
+    }
+
+    public function medico(): BelongsTo
+    {
+        return $this->belongsTo(Medico::class);
     }
 
     public function servicos(): BelongsToMany
@@ -46,15 +51,11 @@ class Consultorio extends Model
 
     public function aceitaServico(Servico $servico): bool
     {
-        if ($this->ala_id !== $servico->ala_id) {
-            return false;
+        if ($this->servicos()->exists()) {
+            return $this->servicos()->whereKey($servico->id)->exists();
         }
 
-        if (! $this->servicos()->exists()) {
-            return true;
-        }
-
-        return $this->servicos()->whereKey($servico->id)->exists();
+        return $this->ala_id === $servico->ala_id;
     }
 
     public function labelCurto(): string

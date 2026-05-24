@@ -21,6 +21,8 @@ class Alas extends Component
 
     public bool $ativo = true;
 
+    public bool $isConsultorio = false;
+
     public function openCreateModal(): void
     {
         $this->resetForm();
@@ -34,6 +36,7 @@ class Alas extends Component
         $this->editingId = $ala->id;
         $this->nome = $ala->nome;
         $this->ativo = $ala->ativo;
+        $this->isConsultorio = $ala->is_consultorio;
         $this->showModal = true;
     }
 
@@ -48,11 +51,13 @@ class Alas extends Component
                 Rule::unique('alas', 'nome')->ignore($this->editingId),
             ],
             'ativo' => ['boolean'],
+            'isConsultorio' => ['boolean'],
         ]);
 
         $dados = [
             'nome' => $this->nome,
             'ativo' => $this->ativo,
+            'is_consultorio' => $this->isConsultorio,
         ];
 
         if ($this->editingId) {
@@ -90,8 +95,9 @@ class Alas extends Component
 
     protected function resetForm(): void
     {
-        $this->reset(['editingId', 'nome', 'ativo']);
+        $this->reset(['editingId', 'nome', 'ativo', 'isConsultorio']);
         $this->ativo = true;
+        $this->isConsultorio = false;
     }
 
     public function render()

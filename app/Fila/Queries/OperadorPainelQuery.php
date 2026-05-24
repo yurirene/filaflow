@@ -37,7 +37,7 @@ class OperadorPainelQuery
             ->get();
 
         $consultorios = Consultorio::query()
-            ->with('ala')
+            ->with(['ala', 'medico'])
             ->where('ativo', true)
             ->orderBy('ala_id')
             ->orderBy('numero')
@@ -136,7 +136,7 @@ class OperadorPainelQuery
         }
 
         return Consultorio::query()
-            ->with('ala')
+            ->with(['ala', 'medico'])
             ->where('ala_id', $alaId)
             ->where('ativo', true)
             ->orderBy('numero')
@@ -146,19 +146,18 @@ class OperadorPainelQuery
     /** @return Collection<int, Servico> */
     public function servicosPermitidosConsultorio(Consultorio $consultorio): Collection
     {
-        $servicos = Servico::query()
+        if ($consultorio->servicos()->exists()) {
+            return $consultorio->servicos()
+                ->where('ativo', true)
+                ->orderBy('nome')
+                ->get();
+        }
+
+        return Servico::query()
             ->where('ala_id', $consultorio->ala_id)
             ->where('ativo', true)
             ->orderBy('nome')
             ->get();
-
-        if (! $consultorio->servicos()->exists()) {
-            return $servicos;
-        }
-
-        $permitidos = $consultorio->servicos()->pluck('servicos.id');
-
-        return $servicos->whereIn('id', $permitidos)->values();
     }
 
     public function regraIntercalacao(int $servicoId): ?RegraIntercalacao

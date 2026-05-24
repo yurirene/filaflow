@@ -3,6 +3,7 @@
 namespace App\Livewire\Operador\Auth;
 
 use App\Models\Operador;
+use App\Support\VerificadorSenha;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
@@ -46,7 +47,7 @@ class Login extends Component
 
         $operador = Operador::query()->where('cpf', $cpf)->first();
 
-        if (! $operador || ! Auth::guard('operador')->getProvider()->validateCredentials($operador, ['password' => $this->password])) {
+        if (! $operador || ! VerificadorSenha::validar($operador, $this->password)) {
             RateLimiter::hit($throttleKey);
 
             throw ValidationException::withMessages([

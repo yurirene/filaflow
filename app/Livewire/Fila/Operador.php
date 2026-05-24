@@ -10,14 +10,16 @@ use App\Fila\Actions\MarcarSenhaAusente;
 use App\Fila\Actions\RechamarSenha;
 use App\Fila\Actions\TransferirSenha;
 use App\Fila\Exceptions\FilaException;
+use App\Fila\MedicoSessao;
 use App\Fila\OperadorSessao;
 use App\Fila\Queries\OperadorPainelQuery;
+use App\Models\Ala;
 use App\Models\Chamada;
 use App\Models\Consultorio;
 use App\Models\Guiche;
+use App\Models\Operador as OperadorModel;
 use App\Models\Senha;
 use App\Models\Servico;
-use App\Models\Operador as OperadorModel;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -54,6 +56,8 @@ class Operador extends Component
 
     public bool $showEncaminharModal = false;
 
+    public string $transferAla = '';
+
     public string $transferServico = '';
 
     public string $transferMotivo = '';
@@ -63,6 +67,8 @@ class Operador extends Component
     public string $encServico = '';
 
     public string $encConsultorio = '';
+
+    public string $encPacienteNome = '';
 
     public int $timerSegundos = 0;
 
@@ -133,6 +139,35 @@ class Operador extends Component
         return $this->operadorPainel['consultorios'];
     }
 
+    /** @return Collection<int, Ala> */
+    #[Computed]
+    public function alasAtivas(): Collection
+    {
+        return Ala::query()->ativa()->orderBy('nome')->get();
+    }
+
+    /** @return Collection<int, Ala> */
+    #[Computed]
+    public function alasConsultorio(): Collection
+    {
+        return Ala::query()->ativa()->consultorio()->orderBy('nome')->get();
+    }
+
+    /** @return Collection<int, Servico> */
+    #[Computed]
+    public function servicosTransferir(): Collection
+    {
+        if (! $this->transferAla) {
+            return collect();
+        }
+
+        return Servico::query()
+            ->where('ala_id', (int) $this->transferAla)
+            ->where('ativo', true)
+            ->orderBy('nome')
+            ->get();
+    }
+
     #[Computed]
     public function consultoriosEncaminhar(): Collection
     {
@@ -158,12 +193,9 @@ class Operador extends Component
         return app(OperadorPainelQuery::class)->servicosPermitidosConsultorio($consultorio);
     }
 
-    public function tickTimer(): void
+    public function onFilaAtualizada(): void
     {
-        if ($this->senhaAtualModel) {
-            $this->timerSegundos++;
-            OperadorSessao::setTimerSegundos($this->timerSegundos);
-        }
+        $this->invalidateOperadorComputeds();
     }
 
     public function alternarModo(string $modo): void
@@ -241,16 +273,53 @@ class Operador extends Component
             return;
         }
 
-        $senha->load('servico');
-        $this->encAla = (string) $senha->servico->ala_id;
+        $senha->load('servico.ala');
+        $alasConsultorio = $this->alasConsultorio;
+
+        if ($alasConsultorio->isEmpty()) {
+            Flux::toast(variant: 'warning', text: __('Nenhuma ala de consultório cadastrada.'));
+
+            return;
+        }
+
+        $alaAtual = $senha->servico->ala;
+        $this->encAla = (string) (
+            $alaAtual?->is_consultorio
+                ? $alaAtual->id
+                : $alasConsultorio->first()->id
+        );
         $this->encServico = (string) $senha->servico_id;
-        $consultorios = app(OperadorPainelQuery::class)->consultoriosDaAla($senha->servico->ala_id);
+        $consultorios = app(OperadorPainelQuery::class)->consultoriosDaAla((int) $this->encAla);
         $this->encConsultorio = (string) ($consultorios->first()?->id ?? '');
+        $this->encPacienteNome = $senha->paciente_nome ?? '';
         $this->showEncaminharModal = true;
+        unset($this->alasConsultorio, $this->consultoriosEncaminhar, $this->servicosEncaminhar);
+    }
+
+    public function abrirTransferir(): void
+    {
+        $senha = $this->senhaAtualModel;
+        if (! $senha) {
+            return;
+        }
+
+        $senha->load('servico');
+        $this->transferAla = (string) $senha->servico->ala_id;
+        $this->transferServico = (string) $senha->servico_id;
+        $this->showTransferModal = true;
+        unset($this->servicosTransferir);
+    }
+
+    public function updatedTransferAla(): void
+    {
+        $servicos = $this->servicosTransferir;
+        $this->transferServico = (string) ($servicos->first()?->id ?? '');
+        unset($this->servicosTransferir);
     }
 
     public function updatedEncAla(): void
     {
+        unset($this->consultoriosEncaminhar, $this->servicosEncaminhar);
         $consultorios = $this->consultoriosEncaminhar;
         $this->encConsultorio = (string) ($consultorios->first()?->id ?? '');
         $this->updatedEncConsultorio();
@@ -271,13 +340,24 @@ class Operador extends Component
             return;
         }
 
+        $this->validate([
+            'encPacienteNome' => ['required', 'string', 'max:150'],
+        ], [], [
+            'encPacienteNome' => __('nome do paciente'),
+        ]);
+
         $senha = Senha::query()->find($senhaId);
         if (! $senha) {
             return;
         }
 
         try {
-            $encaminhar->execute($senha, (int) $this->encServico, (int) $this->encConsultorio);
+            $encaminhar->execute(
+                $senha,
+                (int) $this->encServico,
+                (int) $this->encConsultorio,
+                $this->encPacienteNome,
+            );
             OperadorSessao::setSenhaAtual(null);
             $this->timerSegundos = 0;
             OperadorSessao::setTimerSegundos(0);
@@ -339,8 +419,8 @@ class Operador extends Component
         $consultorio = $resultado['consultorio'];
 
         $local = str_pad((string) $consultorio->numero, 2, '0', STR_PAD_LEFT);
-        if ($consultorio->responsavel) {
-            $local .= ' — '.$consultorio->responsavel;
+        if ($consultorio->medico) {
+            $local .= ' — '.$consultorio->medico->nome;
         }
 
         OperadorSessao::setSenhaAtual($senha->id);
@@ -367,15 +447,19 @@ class Operador extends Component
         }
 
         $senha = Senha::query()->with('servico')->find($senhaId);
-        $chamada = Chamada::query()->where('senha_id', $senhaId)->latest('chamada_em')->first();
+        $chamada = Chamada::query()
+            ->with(['guiche', 'consultorio.medico'])
+            ->where('senha_id', $senhaId)
+            ->latest('chamada_em')
+            ->first();
 
         if ($senha && $chamada) {
             $rechamar->execute($senha, $chamada);
 
             if ($chamada->consultorio_id && $chamada->consultorio) {
                 $local = str_pad((string) $chamada->consultorio->numero, 2, '0', STR_PAD_LEFT);
-                if ($chamada->consultorio->responsavel) {
-                    $local .= ' — '.$chamada->consultorio->responsavel;
+                if ($chamada->consultorio->medico) {
+                    $local .= ' — '.$chamada->consultorio->medico->nome;
                 }
                 OperadorSessao::setPainelAtual([
                     'tipo' => OperadorSessao::MODO_CONSULTORIO,
@@ -406,8 +490,9 @@ class Operador extends Component
         $senha = Senha::query()->find($senhaId);
         if ($senha) {
             $finalizar->execute($senha);
-            OperadorSessao::pushLog('finish', "Finalizou {$senha->codigo} em {$this->timerSegundos}s");
-            OperadorSessao::pushTempo($this->timerSegundos);
+            $duracao = $this->segundosAtendimentoAtual();
+            OperadorSessao::pushLog('finish', "Finalizou {$senha->codigo} em {$duracao}s");
+            OperadorSessao::pushTempo($duracao);
         }
 
         OperadorSessao::setSenhaAtual(null);
@@ -512,7 +597,7 @@ class Operador extends Component
             return '—';
         }
 
-        return __('Consultório :num', ['num' => str_pad((string) $c->numero, 2, '0', STR_PAD_LEFT)]).' — '.$c->responsavel;
+        return MedicoSessao::labelConsultorio($c);
     }
 
     #[Computed]
@@ -581,6 +666,17 @@ class Operador extends Component
         return (string) (int) round(array_sum($tempos) / count($tempos)).'s';
     }
 
+    protected function segundosAtendimentoAtual(): int
+    {
+        $senha = $this->senhaAtualModel;
+
+        if ($senha?->chamada_em) {
+            return (int) $senha->chamada_em->diffInSeconds(now());
+        }
+
+        return $this->timerSegundos;
+    }
+
     protected function invalidateOperadorComputeds(): void
     {
         unset(
@@ -589,8 +685,11 @@ class Operador extends Component
             $this->senhaAtualModel,
             $this->filaFiltrada,
             $this->temSenhaAtual,
+            $this->alasAtivas,
+            $this->alasConsultorio,
             $this->consultoriosEncaminhar,
             $this->servicosEncaminhar,
+            $this->servicosTransferir,
             $this->servicosConsultorio,
         );
     }

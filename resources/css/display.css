@@ -1598,18 +1598,21 @@ body {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.5);
+  background: rgba(15, 23, 42, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
+  padding: 20px;
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   animation: fadeIn .2s ease;
 }
 
 .modal-overlay.hidden { display: none; }
 
-.modal {
+.modal,
+.modal-box {
   background: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
@@ -1617,6 +1620,8 @@ body {
   max-width: 480px;
   overflow: hidden;
   animation: slideUp .25s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .modal-header {
@@ -1655,6 +1660,55 @@ body {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+}
+
+.modal-field,
+.modal-body .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-field label,
+.modal-body .form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.modal-field select,
+.modal-field input[type="text"],
+.modal-field input[type="password"],
+.modal-body .form-group select,
+.modal-body .form-group input[type="text"],
+.modal-body .form-group input[type="password"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: var(--font);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.modal-field select:focus,
+.modal-field input:focus,
+.modal-body .form-group select:focus,
+.modal-body .form-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.modal-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+body.display-standalone .modal-overlay {
+  z-index: 10000;
 }
 
 /* ============================================================

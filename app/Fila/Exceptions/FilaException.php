@@ -36,6 +36,11 @@ class FilaException extends RuntimeException
         return new self('Consultório inválido ou inativo.');
     }
 
+    public static function alaNaoEhConsultorio(): self
+    {
+        return new self('A ala selecionada não é um setor de consultórios.');
+    }
+
     public static function consultorioAlaIncompativel(): self
     {
         return new self('Este consultório não pertence à ala do serviço selecionado.');
@@ -49,6 +54,11 @@ class FilaException extends RuntimeException
     public static function senhaJaEncaminhada(): self
     {
         return new self('Esta senha já foi encaminhada a um consultório.');
+    }
+
+    public static function pacienteNomeIncompleto(): self
+    {
+        return new self('Informe o nome completo do paciente (nome e sobrenome).');
     }
 
     public static function senhaNaoPodeTransferir(): self

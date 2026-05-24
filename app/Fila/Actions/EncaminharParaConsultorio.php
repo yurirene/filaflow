@@ -16,24 +16,26 @@ class EncaminharParaConsultorio
         protected OrdemFilaService $ordemFila,
     ) {}
 
-    public function execute(Senha $senha, int $servicoDestinoId, int $consultorioId): Senha
+    public function execute(Senha $senha, int $servicoDestinoId, int $consultorioId, string $pacienteNome): Senha
     {
         if ($senha->consultorio_id !== null) {
             throw FilaException::senhaJaEncaminhada();
         }
 
+        $pacienteNome = $this->normalizarPacienteNome($pacienteNome);
+
         $destino = Servico::query()->where('id', $servicoDestinoId)->where('ativo', true)->first()
             ?? throw FilaException::servicoInativo();
 
         $consultorio = Consultorio::query()
-            ->with('servicos')
+            ->with(['servicos', 'ala'])
             ->where('id', $consultorioId)
             ->where('ativo', true)
             ->first()
             ?? throw FilaException::consultorioInvalido();
 
-        if ($consultorio->ala_id !== $destino->ala_id) {
-            throw FilaException::consultorioAlaIncompativel();
+        if (! $consultorio->ala?->is_consultorio) {
+            throw FilaException::alaNaoEhConsultorio();
         }
 
         if (! $consultorio->aceitaServico($destino)) {
@@ -50,6 +52,7 @@ class EncaminharParaConsultorio
         $senha->update([
             'servico_id' => $destino->id,
             'consultorio_id' => $consultorio->id,
+            'paciente_nome' => $pacienteNome,
             'status' => StatusSenha::Aguardando,
             'chamada_em' => null,
             'ordem_fila' => $ordem,
@@ -67,5 +70,23 @@ class EncaminharParaConsultorio
         );
 
         return $senha->fresh(['servico', 'consultorio']);
+    }
+
+    protected function normalizarPacienteNome(string $nome): string
+    {
+        $nome = trim(preg_replace('/\s+/u', ' ', $nome) ?? '');
+        $partes = $nome === '' ? [] : explode(' ', $nome);
+
+        if (count($partes) < 2 || mb_strlen($nome) < 5) {
+            throw FilaException::pacienteNomeIncompleto();
+        }
+
+        foreach ($partes as $parte) {
+            if (mb_strlen($parte) < 2) {
+                throw FilaException::pacienteNomeIncompleto();
+            }
+        }
+
+        return $nome;
     }
 }

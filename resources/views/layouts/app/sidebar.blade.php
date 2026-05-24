@@ -32,6 +32,14 @@
                     >
                         {{ __('Operador') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item
+                        icon="user-circle"
+                        :href="auth('medico')->check() ? route('medico.painel') : route('medico.login')"
+                        :current="request()->routeIs('medico.*')"
+                        wire:navigate
+                    >
+                        {{ __('Médico') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
 
                 <flux:sidebar.group :heading="__('Administração')" class="grid">
@@ -49,6 +57,9 @@
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="building-office-2" :href="route('admin.consultorios')" :current="request()->routeIs('admin.consultorios')" wire:navigate>
                         {{ __('Consultórios') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="user-circle" :href="route('admin.medicos')" :current="request()->routeIs('admin.medicos')" wire:navigate>
+                        {{ __('Médicos') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="users" :href="route('admin.operadores')" :current="request()->routeIs('admin.operadores')" wire:navigate>
                         {{ __('Operadores') }}

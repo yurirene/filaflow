@@ -52,11 +52,8 @@ class GuicheSeeder extends Seeder
             'Ala A — Recepção e Triagem' => [
                 ['numero' => 1, 'descricao' => 'Recepção principal', 'servico_prefixo' => 'T', 'ativo' => true],
                 ['numero' => 2, 'descricao' => 'Triagem geral', 'servico_prefixo' => 'T', 'ativo' => true],
-                ['numero' => 3, 'descricao' => 'Atendimento preferencial', 'servico_prefixo' => 'T', 'ativo' => true],
-            ],
-            'Ala B — Laboratório' => [
-                ['numero' => 1, 'descricao' => 'Coleta de sangue', 'servico_prefixo' => 'C', 'ativo' => true],
-                ['numero' => 2, 'descricao' => 'Entrega de materiais', 'servico_prefixo' => 'C', 'ativo' => true],
+                ['numero' => 3, 'descricao' => 'Coleta de sangue', 'servico_prefixo' => 'C', 'ativo' => true],
+                ['numero' => 4, 'descricao' => 'Atendimento preferencial', 'servico_prefixo' => 'T', 'ativo' => true],
             ],
             'Ala C — Imagem' => [
                 ['numero' => 1, 'descricao' => 'Raio-X', 'servico_prefixo' => 'R', 'ativo' => false],

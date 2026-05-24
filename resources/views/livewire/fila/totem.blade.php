@@ -5,6 +5,7 @@
     $notificacoes = $empresa->notificacoes ?? [];
 @endphp
 <div class="view active">
+    <x-fila.echo-listener />
     <div class="totem-container">
         @if ($screen === 'home')
             <div class="totem-screen">

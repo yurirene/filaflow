@@ -70,6 +70,11 @@ class Totem extends Component
         OperadorSessao::setPrioridadeTotem('normal');
     }
 
+    public function onFilaAtualizada(): void
+    {
+        unset($this->totemData);
+    }
+
     public function render()
     {
         return view('livewire.fila.totem');

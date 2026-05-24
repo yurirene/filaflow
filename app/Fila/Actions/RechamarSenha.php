@@ -12,7 +12,7 @@ class RechamarSenha
     public function execute(Senha $senha, Chamada $chamada): void
     {
         $senha->load('servico.ala');
-        $chamada->load(['guiche', 'consultorio']);
+        $chamada->load(['guiche', 'consultorio.medico']);
 
         if ($chamada->consultorio_id) {
             $consultorio = $chamada->consultorio;
@@ -29,7 +29,8 @@ class RechamarSenha
                 isPreferencial: $senha->is_preferencial,
                 ala: $senha->servico->ala?->nome,
                 consultorio: $consultorio->numero,
-                responsavel: $consultorio->responsavel,
+                responsavel: $consultorio->medico?->nome,
+                alaId: $consultorio->ala_id,
             );
 
             return;
@@ -47,6 +48,7 @@ class RechamarSenha
             guiche: $chamada->guiche->numero,
             isPreferencial: $senha->is_preferencial,
             ala: $senha->servico->ala?->nome,
+            alaId: $senha->servico->ala_id,
         );
     }
 }

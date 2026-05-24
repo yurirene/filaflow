@@ -87,6 +87,7 @@ class ChamarProximaSenha
                 guiche: $guiche->numero,
                 isPreferencial: $senha->is_preferencial,
                 ala: $servico->ala?->nome,
+                alaId: $servico->ala_id,
             );
 
             FilaAtualizada::dispatch(

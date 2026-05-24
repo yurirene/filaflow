@@ -20,6 +20,7 @@ class Senha extends Model
         'is_preferencial',
         'is_agendado',
         'status',
+        'paciente_nome',
         'paciente_celular',
         'emitida_em',
         'chamada_em',

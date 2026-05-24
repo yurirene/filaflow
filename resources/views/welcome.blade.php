@@ -12,7 +12,7 @@
                 <br>
             </div>
 
-            <div class="grid w-full max-w-2xl gap-4 sm:grid-cols-2">
+            <div class="grid w-full max-w-3xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <a
                     href="{{ route('totem') }}"
                     target="_blank"
@@ -40,8 +40,16 @@
                 </a>
 
                 <a
+                    href="{{ route('medico.login') }}"
+                    class="flex min-h-32 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm transition hover:border-cyan-500 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-cyan-400"
+                >
+                    <flux:icon.user-circle class="size-10 text-cyan-600 dark:text-cyan-400" />
+                    <span class="text-lg font-semibold tracking-wide">{{ __('Médico') }}</span>
+                </a>
+
+                <a
                     href="{{ auth()->check() ? route('dashboard') : route('login') }}"
-                    class="flex min-h-32 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm transition hover:border-amber-500 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-amber-400"
+                    class="flex min-h-32 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm transition hover:border-amber-500 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-amber-400 sm:col-span-2 lg:col-span-1"
                 >
                     <flux:icon.cog-6-tooth class="size-10 text-amber-600 dark:text-amber-400" />
                     <span class="text-lg font-semibold tracking-wide">{{ __('Admin') }}</span>

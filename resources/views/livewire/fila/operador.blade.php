@@ -4,7 +4,8 @@
     $servicos = $painel['servicos'];
     $senhaAtual = $this->senhaAtualModel;
 @endphp
-<div class="view active operador-view" wire:poll.1s="tickTimer">
+<div class="view active operador-view">
+    <x-fila.echo-listener />
     <header class="operador-topbar">
         <div class="operador-topbar-brand">
             <span class="operador-topbar-logo">⚕</span>
@@ -85,7 +86,7 @@
                     <select wire:model.live="consultorio">
                         @foreach ($this->consultoriosDisponiveis as $c)
                             <option value="{{ $c->id }}">
-                                {{ __('Consultório') }} {{ str_pad((string) $c->numero, 2, '0', STR_PAD_LEFT) }} — {{ $c->responsavel }}
+                                {{ \App\Fila\MedicoSessao::labelConsultorio($c) }}
                             </option>
                         @endforeach
                     </select>
@@ -124,7 +125,7 @@
                 </div>
                 <div class="op-current-timer">
                     <span class="timer-icon">⏱</span>
-                    <span class="timer-value">{{ $this->timerFormatado }}</span>
+                    <x-fila.timer :chamada-em="$senhaAtual?->chamada_em" />
                 </div>
                 <div class="op-actions">
                     <button type="button" class="op-btn op-btn-call" wire:click="chamarProxima">
@@ -137,7 +138,7 @@
                         <button type="button" class="op-btn op-btn-transfer" wire:click="abrirEncaminhar" @disabled(! $this->temSenhaAtual)>
                             <span>🏥</span> {{ __('Encaminhar') }}
                         </button>
-                        <button type="button" class="op-btn op-btn-transfer" wire:click="$set('showTransferModal', true)" @disabled(! $this->temSenhaAtual)>
+                        <button type="button" class="op-btn op-btn-transfer" wire:click="abrirTransferir" @disabled(! $this->temSenhaAtual)>
                             <span>↗</span> {{ __('Trocar fila') }}
                         </button>
                     @endif
@@ -172,6 +173,9 @@
                             <span class="queue-item-pos">{{ $idx + 1 }}</span>
                             <span class="queue-item-num">{{ $senha->codigo }}</span>
                             <div class="queue-item-info">
+                                @if ($senha->paciente_nome)
+                                    <span class="queue-item-service">{{ $senha->paciente_nome }}</span>
+                                @endif
                                 <span class="queue-item-service">{{ $senha->servico?->nome ?? '' }}</span>
                                 <span class="queue-item-time">{{ __('Aguardando há') }} {{ $minutos < 1 ? __('menos de 1') : $minutos }} min</span>
                             </div>
@@ -225,8 +229,9 @@
     </div>
 
     @if ($showEncaminharModal)
+        @teleport('body')
         <div class="modal-overlay" wire:click.self="$set('showEncaminharModal', false)">
-            <div class="modal-box">
+            <div class="modal" role="dialog" aria-modal="true">
                 <div class="modal-header">
                     <h3>{{ __('Encaminhar para consultório') }}</h3>
                     <button type="button" class="modal-close" wire:click="$set('showEncaminharModal', false)">✕</button>
@@ -236,9 +241,11 @@
                     <div class="modal-field">
                         <label>{{ __('Ala') }}</label>
                         <select wire:model.live="encAla">
-                            @foreach ($painel['servicos']->pluck('ala')->unique('id')->filter() as $ala)
+                            @forelse ($this->alasConsultorio as $ala)
                                 <option value="{{ $ala->id }}">{{ $ala->nome }}</option>
-                            @endforeach
+                            @empty
+                                <option value="">{{ __('Nenhuma ala de consultório') }}</option>
+                            @endforelse
                         </select>
                     </div>
                     <div class="modal-field">
@@ -246,7 +253,7 @@
                         <select wire:model.live="encConsultorio">
                             @foreach ($this->consultoriosEncaminhar as $c)
                                 <option value="{{ $c->id }}">
-                                    {{ str_pad((string) $c->numero, 2, '0', STR_PAD_LEFT) }} — {{ $c->responsavel }}
+                                    {{ \App\Fila\MedicoSessao::labelConsultorio($c) }}
                                 </option>
                             @endforeach
                         </select>
@@ -259,6 +266,20 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="modal-field">
+                        <label for="enc-paciente-nome">{{ __('Nome completo do paciente') }} <span class="text-red-600">*</span></label>
+                        <input
+                            id="enc-paciente-nome"
+                            type="text"
+                            wire:model="encPacienteNome"
+                            placeholder="{{ __('Ex: Maria da Silva Santos') }}"
+                            autocomplete="name"
+                            required
+                        />
+                        @error('encPacienteNome')
+                            <span class="text-sm text-red-600 dark:text-red-400">{{ $message }}</span>
+                        @enderror
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-primary" wire:click="confirmarEncaminhamento">{{ __('Confirmar') }}</button>
@@ -266,22 +287,32 @@
                 </div>
             </div>
         </div>
+        @endteleport
     @endif
 
     @if ($showTransferModal)
+        @teleport('body')
         <div class="modal-overlay" wire:click.self="$set('showTransferModal', false)">
-            <div class="modal-box">
+            <div class="modal" role="dialog" aria-modal="true">
                 <div class="modal-header">
                     <h3>{{ __('Trocar fila no guichê') }}</h3>
                     <button type="button" class="modal-close" wire:click="$set('showTransferModal', false)">✕</button>
                 </div>
                 <div class="modal-body">
                     <p>{{ __('Senha') }}: <strong>{{ $senhaAtual?->codigo ?? '---' }}</strong></p>
-                    <flux:text class="mb-3 text-sm text-zinc-500">{{ __('A senha permanece na recepção (guichê), apenas muda de serviço.') }}</flux:text>
+                    <p class="modal-hint">{{ __('A senha permanece na recepção (guichê), apenas muda de serviço.') }}</p>
+                    <div class="modal-field">
+                        <label>{{ __('Ala') }}</label>
+                        <select wire:model.live="transferAla">
+                            @foreach ($this->alasAtivas as $ala)
+                                <option value="{{ $ala->id }}">{{ $ala->nome }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="modal-field">
                         <label>{{ __('Novo serviço') }}</label>
                         <select wire:model="transferServico">
-                            @foreach ($servicos as $svc)
+                            @foreach ($this->servicosTransferir as $svc)
                                 <option value="{{ $svc->id }}">{{ $svc->nome }}</option>
                             @endforeach
                         </select>
@@ -297,11 +328,13 @@
                 </div>
             </div>
         </div>
+        @endteleport
     @endif
 
     @if ($showPasswordModal)
+        @teleport('body')
         <div class="modal-overlay" wire:click.self="$set('showPasswordModal', false)">
-            <div class="modal-box">
+            <div class="modal" role="dialog" aria-modal="true">
                 <div class="modal-header">
                     <h3>{{ __('Trocar senha') }}</h3>
                     <button type="button" class="modal-close" wire:click="$set('showPasswordModal', false)">✕</button>
@@ -328,5 +361,6 @@
                 </form>
             </div>
         </div>
+        @endteleport
     @endif
 </div>

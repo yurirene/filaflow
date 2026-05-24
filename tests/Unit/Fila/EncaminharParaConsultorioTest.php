@@ -9,8 +9,10 @@ use App\Fila\Exceptions\FilaException;
 use App\Models\Ala;
 use App\Models\Consultorio;
 use App\Models\Guiche;
+use App\Models\Medico;
 use App\Models\Senha;
 use App\Models\Servico;
+use Database\Seeders\FilaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -22,7 +24,7 @@ class EncaminharParaConsultorioTest extends TestCase
     #[Test]
     public function encaminhar_move_senha_para_fila_do_consultorio(): void
     {
-        $ala = Ala::query()->create(['nome' => 'Ala Teste', 'ativo' => true]);
+        $ala = Ala::query()->create(['nome' => 'Ala Teste', 'ativo' => true, 'is_consultorio' => true]);
         $servico = Servico::query()->create([
             'ala_id' => $ala->id,
             'nome' => 'Consulta',
@@ -35,10 +37,11 @@ class EncaminharParaConsultorioTest extends TestCase
             'prefixo' => 'E',
             'ativo' => true,
         ]);
+        $medico = Medico::factory()->create();
         $consultorio = Consultorio::query()->create([
             'ala_id' => $ala->id,
+            'medico_id' => $medico->id,
             'numero' => 1,
-            'responsavel' => 'Dr. Teste',
             'ativo' => true,
         ]);
         Guiche::query()->create([
@@ -58,10 +61,11 @@ class EncaminharParaConsultorioTest extends TestCase
             'ordem_fila' => 1,
         ]);
 
-        app(EncaminharParaConsultorio::class)->execute($senha, $outro->id, $consultorio->id);
+        app(EncaminharParaConsultorio::class)->execute($senha, $outro->id, $consultorio->id, 'Maria Silva');
 
         $senha->refresh();
         $this->assertSame($consultorio->id, $senha->consultorio_id);
+        $this->assertSame('Maria Silva', $senha->paciente_nome);
         $this->assertSame($outro->id, $senha->servico_id);
         $this->assertSame(StatusSenha::Aguardando, $senha->status);
 
@@ -70,18 +74,43 @@ class EncaminharParaConsultorioTest extends TestCase
     }
 
     #[Test]
-    public function rejeita_servico_de_outra_ala(): void
+    public function rejeita_nome_incompleto(): void
     {
-        $alaA = Ala::query()->create(['nome' => 'A', 'ativo' => true]);
-        $alaB = Ala::query()->create(['nome' => 'B', 'ativo' => true]);
-        $servicoA = Servico::query()->create(['ala_id' => $alaA->id, 'nome' => 'S A', 'prefixo' => 'A', 'ativo' => true]);
-        $servicoB = Servico::query()->create(['ala_id' => $alaB->id, 'nome' => 'S B', 'prefixo' => 'B', 'ativo' => true]);
+        $ala = Ala::query()->create(['nome' => 'Ala', 'ativo' => true, 'is_consultorio' => true]);
+        $servico = Servico::query()->create(['ala_id' => $ala->id, 'nome' => 'S', 'prefixo' => 'S', 'ativo' => true]);
+        $medico = Medico::factory()->create();
         $consultorio = Consultorio::query()->create([
-            'ala_id' => $alaA->id,
+            'ala_id' => $ala->id,
+            'medico_id' => $medico->id,
             'numero' => 1,
-            'responsavel' => 'Dr.',
             'ativo' => true,
         ]);
+        $senha = Senha::query()->create([
+            'codigo' => 'S001',
+            'servico_id' => $servico->id,
+            'status' => StatusSenha::Chamado,
+            'emitida_em' => now(),
+        ]);
+
+        $this->expectException(FilaException::class);
+        app(EncaminharParaConsultorio::class)->execute($senha, $servico->id, $consultorio->id, 'Maria');
+    }
+
+    #[Test]
+    public function rejeita_servico_de_outra_ala(): void
+    {
+        $alaA = Ala::query()->create(['nome' => 'A', 'ativo' => true, 'is_consultorio' => true]);
+        $alaB = Ala::query()->create(['nome' => 'B', 'ativo' => true, 'is_consultorio' => false]);
+        $servicoA = Servico::query()->create(['ala_id' => $alaA->id, 'nome' => 'S A', 'prefixo' => 'A', 'ativo' => true]);
+        $servicoB = Servico::query()->create(['ala_id' => $alaB->id, 'nome' => 'S B', 'prefixo' => 'B', 'ativo' => true]);
+        $medico = Medico::factory()->create();
+        $consultorio = Consultorio::query()->create([
+            'ala_id' => $alaA->id,
+            'medico_id' => $medico->id,
+            'numero' => 1,
+            'ativo' => true,
+        ]);
+        $consultorio->servicos()->sync([$servicoA->id]);
         $senha = Senha::query()->create([
             'codigo' => 'A001',
             'servico_id' => $servicoA->id,
@@ -92,20 +121,22 @@ class EncaminharParaConsultorioTest extends TestCase
         ]);
 
         $this->expectException(FilaException::class);
-        app(EncaminharParaConsultorio::class)->execute($senha, $servicoB->id, $consultorio->id);
+        app(EncaminharParaConsultorio::class)->execute($senha, $servicoB->id, $consultorio->id, 'Maria Silva');
     }
 
     #[Test]
     public function chamar_guiche_ignora_senhas_encaminhadas(): void
     {
-        $this->seed(\Database\Seeders\FilaSeeder::class);
+        $this->seed(FilaSeeder::class);
 
         $servico = Servico::query()->where('prefixo', 'T')->first();
         $guiche = Guiche::query()->where('ala_id', $servico->ala_id)->first();
-        $consultorio = Consultorio::query()->where('ala_id', $servico->ala_id)->first();
+        $consultorio = Consultorio::query()
+            ->whereHas('ala', fn ($q) => $q->where('is_consultorio', true))
+            ->first();
 
         $encaminhada = Senha::query()->filaGuiche($servico->id)->first();
-        app(EncaminharParaConsultorio::class)->execute($encaminhada, $servico->id, $consultorio->id);
+        app(EncaminharParaConsultorio::class)->execute($encaminhada, $servico->id, $consultorio->id, 'João Pereira');
 
         $antes = Senha::query()->filaGuiche($servico->id)->count();
         $resultado = app(ChamarProximaSenha::class)->execute($servico->id, $guiche->id, 1);

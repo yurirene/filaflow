@@ -27,6 +27,7 @@ class EmitirSenha
         PrioridadeSenha $prioridade,
         ?string $pacienteCelular = null,
         bool $isAgendado = false,
+        ?string $pacienteNome = null,
     ): array {
         $servico = Servico::query()->where('id', $servicoId)->where('ativo', true)->first();
 
@@ -34,7 +35,7 @@ class EmitirSenha
             throw FilaException::servicoInativo();
         }
 
-        return DB::transaction(function () use ($servico, $prioridade, $pacienteCelular, $isAgendado): array {
+        return DB::transaction(function () use ($servico, $prioridade, $pacienteCelular, $isAgendado, $pacienteNome): array {
             $isPreferencial = $prioridade->isPreferencial();
             $ordem = $this->ordemFila->proximaOrdem($servico->id, $isPreferencial, $isAgendado);
             $codigo = $this->gerador->gerar($servico);
@@ -47,6 +48,7 @@ class EmitirSenha
                 'is_preferencial' => $isPreferencial,
                 'is_agendado' => $isAgendado,
                 'status' => StatusSenha::Aguardando,
+                'paciente_nome' => $pacienteNome,
                 'paciente_celular' => $pacienteCelular,
                 'emitida_em' => $emitidaEm,
                 'ordem_fila' => $ordem,

@@ -2,12 +2,15 @@
 
 namespace Tests\Feature\Fila;
 
+use App\Fila\Enums\StatusSenha;
 use App\Livewire\Fila\Admin\Consultorios;
 use App\Livewire\Fila\Admin\Guiches;
 use App\Livewire\Fila\Admin\Servicos;
 use App\Models\Ala;
 use App\Models\Consultorio;
 use App\Models\Guiche;
+use App\Models\Medico;
+use App\Models\Senha;
 use App\Models\Servico;
 use App\Models\User;
 use Database\Seeders\FilaSeeder;
@@ -76,15 +79,17 @@ class AdminCrudTest extends TestCase
 
         $this->actingAs($user);
 
+        $novoMedico = Medico::factory()->create(['nome' => 'Dr. Atualizado']);
+
         Livewire::test(Consultorios::class)
             ->call('openEditModal', $consultorio->id)
-            ->set('responsavel', 'Dr. Atualizado')
+            ->set('medicoId', $novoMedico->id)
             ->call('salvar')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('consultorios', [
             'id' => $consultorio->id,
-            'responsavel' => 'Dr. Atualizado',
+            'medico_id' => $novoMedico->id,
         ]);
     }
 
@@ -99,12 +104,12 @@ class AdminCrudTest extends TestCase
             'ativo' => true,
         ]);
 
-        $senha = \App\Models\Senha::query()->create([
+        $senha = Senha::query()->create([
             'codigo' => 'Z001',
             'servico_id' => $servico->id,
             'is_preferencial' => false,
             'is_agendado' => false,
-            'status' => \App\Fila\Enums\StatusSenha::Aguardando,
+            'status' => StatusSenha::Aguardando,
             'emitida_em' => now(),
         ]);
 

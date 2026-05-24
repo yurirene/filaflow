@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Medico;
 use App\Models\Operador;
 use App\Models\User;
 
@@ -47,6 +48,10 @@ return [
             'driver' => 'session',
             'provider' => 'operadores',
         ],
+        'medico' => [
+            'driver' => 'session',
+            'provider' => 'medicos',
+        ],
     ],
 
     /*
@@ -75,6 +80,11 @@ return [
         'operadores' => [
             'driver' => 'eloquent',
             'model' => Operador::class,
+        ],
+
+        'medicos' => [
+            'driver' => 'eloquent',
+            'model' => Medico::class,
         ],
 
         // 'users' => [

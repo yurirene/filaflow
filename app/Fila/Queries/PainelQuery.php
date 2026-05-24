@@ -23,17 +23,22 @@ class PainelQuery
      *     filasResumo: array<int, array{tamanho: int, esperaMin: int}>
      * }
      */
-    public function execute(): array
+    public function execute(?int $alaId = null): array
     {
         $empresa = Empresa::instancia();
 
         $alas = Ala::query()->where('ativo', true)->orderBy('nome')->get();
 
-        $servicos = Servico::query()
+        $servicosQuery = Servico::query()
             ->with('ala')
             ->where('ativo', true)
-            ->orderBy('nome')
-            ->get();
+            ->orderBy('nome');
+
+        if ($alaId !== null) {
+            $servicosQuery->where('ala_id', $alaId);
+        }
+
+        $servicos = $servicosQuery->get();
 
         $contagens = Senha::query()
             ->aguardando()
@@ -52,10 +57,16 @@ class PainelQuery
             ];
         }
 
-        $historico = Chamada::query()
-            ->with(['senha.servico', 'guiche', 'consultorio'])
+        $historicoQuery = Chamada::query()
+            ->with(['senha.servico', 'guiche', 'consultorio.medico'])
             ->orderByDesc('chamada_em')
-            ->limit(20)
+            ->limit(20);
+
+        if ($alaId !== null) {
+            $this->aplicarFiltroAla($historicoQuery, $alaId);
+        }
+
+        $historico = $historicoQuery
             ->get()
             ->map(fn (Chamada $c) => $this->mapHistorico($c))
             ->values()
@@ -65,14 +76,14 @@ class PainelQuery
             'empresa' => $empresa,
             'alas' => $alas,
             'servicos' => $servicos,
-            'painelAtual' => $this->painelAtual(),
+            'painelAtual' => $this->painelAtual($alaId),
             'historico' => $historico,
             'filasResumo' => $filasResumo,
         ];
     }
 
     /** @return array{tipo: string, codigo: string, servico: string, local: string} */
-    public function painelAtual(): array
+    public function painelAtual(?int $alaId = null): array
     {
         $default = [
             'tipo' => OperadorSessao::MODO_GUICHE,
@@ -81,14 +92,15 @@ class PainelQuery
             'local' => '--',
         ];
 
-        if ($painel = OperadorSessao::painelAtual()) {
-            return $painel;
+        $query = Chamada::query()
+            ->with(['senha.servico', 'guiche', 'consultorio.medico'])
+            ->orderByDesc('chamada_em');
+
+        if ($alaId !== null) {
+            $this->aplicarFiltroAla($query, $alaId);
         }
 
-        $ultima = Chamada::query()
-            ->with(['senha.servico', 'guiche', 'consultorio'])
-            ->orderByDesc('chamada_em')
-            ->first();
+        $ultima = $query->first();
 
         if (! $ultima) {
             return $default;
@@ -97,20 +109,31 @@ class PainelQuery
         return $this->mapPainelFromChamada($ultima);
     }
 
+    protected function aplicarFiltroAla($query, int $alaId): void
+    {
+        $query->where(function ($q) use ($alaId) {
+            $q->where(function ($q2) use ($alaId) {
+                $q2->whereNotNull('guiche_id')
+                    ->whereHas('guiche', fn ($g) => $g->where('ala_id', $alaId));
+            })->orWhere(function ($q2) use ($alaId) {
+                $q2->whereNotNull('consultorio_id')
+                    ->whereHas('consultorio', fn ($c) => $c->where('ala_id', $alaId));
+            });
+        });
+    }
+
     /** @return array{tipo: string, codigo: string, servico: string, local: string} */
     protected function mapPainelFromChamada(Chamada $c): array
     {
         if ($c->consultorio_id && $c->consultorio) {
             $local = str_pad((string) $c->consultorio->numero, 2, '0', STR_PAD_LEFT);
-            if ($c->consultorio->responsavel) {
-                $local .= ' — '.$c->consultorio->responsavel;
-            }
 
             return [
                 'tipo' => OperadorSessao::MODO_CONSULTORIO,
                 'codigo' => $c->senha->codigo,
                 'servico' => $c->senha->servico->nome,
                 'local' => $local,
+                'paciente' => $c->senha->paciente_nome,
             ];
         }
 
@@ -127,11 +150,15 @@ class PainelQuery
     {
         $painel = $this->mapPainelFromChamada($c);
 
+        $alaId = $c->consultorio_id && $c->consultorio
+            ? $c->consultorio->ala_id
+            : $c->senha->servico->ala_id;
+
         return [
             'codigo' => $painel['codigo'],
             'servico' => $painel['servico'],
             'servicoId' => $c->senha->servico_id,
-            'alaId' => $c->senha->servico->ala_id,
+            'alaId' => $alaId,
             'tipo' => $painel['tipo'],
             'local' => $painel['local'],
             'hora' => $c->chamada_em->timezone(config('app.timezone'))->format('H:i'),

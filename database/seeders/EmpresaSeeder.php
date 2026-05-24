@@ -42,7 +42,7 @@ class EmpresaSeeder extends Seeder
                 'Bem-vindo! Traga seus documentos e exames anteriores.',
             ),
             'reinicio_hora' => env('FILA_CLINICA_REINICIO_HORA', '00:00'),
-            'som' => 'beep'
+            'som' => 'beep',
         ];
     }
 }

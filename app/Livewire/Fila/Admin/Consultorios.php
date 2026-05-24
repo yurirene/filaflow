@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Fila\Admin;
 
+use App\Fila\Enums\StatusOperador;
 use App\Models\Ala;
 use App\Models\Consultorio;
+use App\Models\Medico;
 use App\Models\Servico;
 use Flux\Flux;
 use Illuminate\Validation\Rule;
@@ -22,7 +24,7 @@ class Consultorios extends Component
 
     public int $numero = 1;
 
-    public string $responsavel = '';
+    public ?int $medicoId = null;
 
     public ?int $alaId = null;
 
@@ -32,33 +34,41 @@ class Consultorios extends Component
     public array $servicosSelecionados = [];
 
     #[Computed]
-    public function alas()
+    public function alasConsultorio()
     {
-        return Ala::query()->orderBy('nome')->get();
+        return Ala::query()->ativa()->consultorio()->orderBy('nome')->get();
     }
 
     #[Computed]
     public function consultorios()
     {
-        return Consultorio::query()->with(['ala', 'servicos'])->orderBy('ala_id')->orderBy('numero')->get();
+        return Consultorio::query()->with(['ala', 'medico', 'servicos'])->orderBy('ala_id')->orderBy('numero')->get();
     }
 
     #[Computed]
-    public function servicosDaAla()
+    public function servicosAtivos()
     {
-        if (! $this->alaId) {
-            return collect();
-        }
+        return Servico::query()->where('ativo', true)->orderBy('nome')->get();
+    }
 
-        return Servico::query()
-            ->where('ala_id', $this->alaId)
+    #[Computed]
+    public function medicosDisponiveis()
+    {
+        return Medico::query()
+            ->where('status', StatusOperador::Ativo)
+            ->where(function ($q) {
+                $q->whereDoesntHave('consultorio');
+                if ($this->editingId) {
+                    $q->orWhereRelation('consultorio', 'id', $this->editingId);
+                }
+            })
             ->orderBy('nome')
             ->get();
     }
 
     public function mount(): void
     {
-        $this->alaId = Ala::query()->where('ativo', true)->orderBy('nome')->value('id');
+        $this->alaId = Ala::query()->ativa()->consultorio()->orderBy('nome')->value('id');
     }
 
     public function openModal(): void
@@ -74,7 +84,7 @@ class Consultorios extends Component
 
         $this->editingId = $consultorio->id;
         $this->numero = $consultorio->numero;
-        $this->responsavel = $consultorio->responsavel;
+        $this->medicoId = $consultorio->medico_id;
         $this->alaId = $consultorio->ala_id;
         $this->ativo = $consultorio->ativo;
         $this->servicosSelecionados = $consultorio->servicos->pluck('id')->all();
@@ -93,25 +103,36 @@ class Consultorios extends Component
                     ->ignore($this->editingId),
             ],
             'alaId' => 'required|exists:alas,id',
-            'responsavel' => 'required|string|max:150',
+            'medicoId' => [
+                'required',
+                'exists:medicos,id',
+                Rule::unique('consultorios', 'medico_id')->ignore($this->editingId),
+            ],
             'ativo' => 'boolean',
             'servicosSelecionados' => 'array',
             'servicosSelecionados.*' => 'exists:servicos,id',
+        ], [], [
+            'medicoId' => __('médico'),
         ]);
 
-        foreach ($this->servicosSelecionados as $servicoId) {
-            $servico = Servico::query()->find($servicoId);
-            if ($servico?->ala_id !== $this->alaId) {
-                $this->addError('servicosSelecionados', __('Todos os serviços devem pertencer à mesma ala do consultório.'));
+        $ala = Ala::query()->find($this->alaId);
+        if (! $ala?->is_consultorio) {
+            $this->addError('alaId', __('Consultórios só podem ser cadastrados em alas de consultório.'));
 
-                return;
-            }
+            return;
+        }
+
+        $medico = Medico::query()->find($this->medicoId);
+        if (! $medico?->isAtivo()) {
+            $this->addError('medicoId', __('O médico selecionado está inativo.'));
+
+            return;
         }
 
         $dados = [
             'ala_id' => $this->alaId,
+            'medico_id' => $this->medicoId,
             'numero' => $this->numero,
-            'responsavel' => $this->responsavel,
             'ativo' => $this->ativo,
         ];
 
@@ -130,13 +151,13 @@ class Consultorios extends Component
 
         $this->showModal = false;
         $this->resetForm();
-        unset($this->consultorios);
+        unset($this->consultorios, $this->medicosDisponiveis);
     }
 
     public function excluir(int $id): void
     {
         Consultorio::query()->whereKey($id)->delete();
-        unset($this->consultorios);
+        unset($this->consultorios, $this->medicosDisponiveis);
         Flux::toast(variant: 'success', text: __('Consultório excluído.'));
     }
 
@@ -150,7 +171,7 @@ class Consultorios extends Component
 
     protected function resetForm(): void
     {
-        $this->reset(['editingId', 'responsavel', 'servicosSelecionados']);
+        $this->reset(['editingId', 'medicoId', 'servicosSelecionados']);
         $this->ativo = true;
     }
 

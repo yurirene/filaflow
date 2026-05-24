@@ -30,14 +30,16 @@ class OperadorEncaminharTest extends TestCase
         $operador = OperadorModel::query()->where('cpf', '52998224725')->first();
         $servico = Servico::query()->where('prefixo', 'T')->first();
         $guiche = Guiche::query()->where('ala_id', $servico->ala_id)->first();
-        $consultorio = Consultorio::query()->where('ala_id', $servico->ala_id)->first();
+        $consultorio = Consultorio::query()
+            ->whereHas('servicos', fn ($q) => $q->whereKey($servico->id))
+            ->first();
 
         $this->actingAs($operador, 'operador');
 
         $resultado = app(ChamarProximaSenha::class)->execute($servico->id, $guiche->id, $operador->id);
         $senha = $resultado['senha'];
 
-        app(EncaminharParaConsultorio::class)->execute($senha, $servico->id, $consultorio->id);
+        app(EncaminharParaConsultorio::class)->execute($senha, $servico->id, $consultorio->id, 'Ana Costa Lima');
 
         $component = Livewire::test(Operador::class)
             ->call('alternarModo', 'consultorio')
@@ -54,7 +56,9 @@ class OperadorEncaminharTest extends TestCase
 
         $operador = OperadorModel::query()->where('cpf', '52998224725')->first();
         $servico = Servico::query()->where('prefixo', 'T')->first();
-        $consultorio = Consultorio::query()->where('ala_id', $servico->ala_id)->first();
+        $consultorio = Consultorio::query()
+            ->whereHas('servicos', fn ($q) => $q->whereKey($servico->id))
+            ->first();
 
         $senha = Senha::query()->create([
             'codigo' => 'T999',

@@ -5,6 +5,7 @@ namespace App\Fila\Queries;
 use App\Fila\Enums\StatusSenha;
 use App\Models\Senha;
 use App\Models\Servico;
+use Illuminate\Support\Collection;
 
 class RelatorioResumoQuery
 {
@@ -39,7 +40,7 @@ class RelatorioResumoQuery
         ];
     }
 
-    /** @return \Illuminate\Support\Collection<int, Servico> */
+    /** @return Collection<int, Servico> */
     public function servicosAtivos()
     {
         return Servico::query()->where('ativo', true)->orderBy('nome')->get();

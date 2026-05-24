@@ -12,9 +12,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/css/display.css',
                 'resources/js/app.js',
-                /* @chisel-passkeys */
                 'resources/js/passkeys.js',
-                /* @end-chisel-passkeys */
             ],
             refresh: true,
             fonts: [

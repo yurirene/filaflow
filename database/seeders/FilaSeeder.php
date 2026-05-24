@@ -20,6 +20,16 @@ class FilaSeeder extends Seeder
     public function run(): void
     {
         $this->call(EmpresaSeeder::class);
+
+        $alas = $this->callWithReturn(AlaSeeder::class);
+        $servicos = $this->seedServicos($alas);
+
+        $this->call(GuicheSeeder::class);
+        $this->call(ConsultorioSeeder::class);
+
+        $this->seedOperadoresDemo();
+        $this->seedSenhas($servicos);
+        $this->seedAgendamentos($servicos);
     }
 
     /** @param  Collection<string, Ala>  $alas */
@@ -27,7 +37,7 @@ class FilaSeeder extends Seeder
     {
         $mapaAlas = [
             'T' => 'Ala A — Recepção e Triagem',
-            'C' => 'Ala B — Laboratório',
+            'C' => 'Ala A — Recepção e Triagem',
             'R' => 'Ala C — Imagem',
             'X' => 'Ala D — Administrativo',
         ];

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Operador;
 
 use App\Fila\Enums\StatusOperador;
+use App\Livewire\Operador\Auth\Login;
 use App\Models\Operador;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -22,7 +23,7 @@ class OperadorAuthTest extends TestCase
             'status' => StatusOperador::Ativo,
         ]);
 
-        Livewire::test(\App\Livewire\Operador\Auth\Login::class)
+        Livewire::test(Login::class)
             ->set('cpf', '529.982.247-25')
             ->set('password', 'senha123')
             ->call('login')
@@ -40,7 +41,7 @@ class OperadorAuthTest extends TestCase
             'status' => StatusOperador::Inativo,
         ]);
 
-        Livewire::test(\App\Livewire\Operador\Auth\Login::class)
+        Livewire::test(Login::class)
             ->set('cpf', '52998224725')
             ->set('password', 'senha123')
             ->call('login')

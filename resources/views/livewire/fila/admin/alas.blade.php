@@ -12,6 +12,7 @@
                     <thead>
                         <tr class="border-b border-zinc-200 dark:border-zinc-700">
                             <th class="pb-3 font-medium">{{ __('Nome') }}</th>
+                            <th class="pb-3 font-medium">{{ __('Tipo') }}</th>
                             <th class="pb-3 font-medium">{{ __('Status') }}</th>
                             <th class="pb-3 font-medium text-end">{{ __('Ações') }}</th>
                         </tr>
@@ -20,6 +21,11 @@
                         @forelse ($alas as $ala)
                             <tr class="border-b border-zinc-100 dark:border-zinc-800" wire:key="ala-{{ $ala->id }}">
                                 <td class="py-3">{{ $ala->nome }}</td>
+                                <td class="py-3">
+                                    <flux:badge :color="$ala->is_consultorio ? 'purple' : 'blue'">
+                                        {{ $ala->is_consultorio ? __('Consultório') : __('Recepção / guichê') }}
+                                    </flux:badge>
+                                </td>
                                 <td class="py-3">
                                     <flux:badge :color="$ala->ativo ? 'green' : 'zinc'">
                                         {{ $ala->ativo ? __('Ativa') : __('Inativa') }}
@@ -46,7 +52,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" class="py-8 text-center text-zinc-500">
+                                <td colspan="4" class="py-8 text-center text-zinc-500">
                                     {{ __('Nenhuma ala cadastrada. Cadastre alas antes de criar serviços e guichês.') }}
                                 </td>
                             </tr>
@@ -66,6 +72,12 @@
             </flux:field>
             <flux:field>
                 <flux:checkbox wire:model="ativo" :label="__('Ativa')" />
+            </flux:field>
+            <flux:field>
+                <flux:checkbox wire:model="isConsultorio" :label="__('Setor de consultórios')" />
+                <flux:text class="text-xs text-zinc-500">
+                    {{ __('Alas marcadas assim aparecem no encaminhamento do operador e recebem salas de consultório.') }}
+                </flux:text>
             </flux:field>
             <div class="flex justify-end gap-2">
                 <flux:button variant="ghost" type="button" wire:click="$set('showModal', false)">{{ __('Cancelar') }}</flux:button>

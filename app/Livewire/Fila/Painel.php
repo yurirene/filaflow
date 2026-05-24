@@ -15,64 +15,48 @@ class Painel extends Component
 {
     public string $ala = 'all';
 
-    public string $clock = '--:--:--';
-
-    public string $date = '';
-
     public string $lastCodigo = '---';
 
     public function mount(): void
     {
         $this->ala = OperadorSessao::painelAla();
         $this->lastCodigo = app(PainelQuery::class)->painelAtual()['codigo'];
-        $this->tickClock();
     }
 
     #[Computed]
     public function painelData(): array
     {
-        return app(PainelQuery::class)->execute();
+        $alaId = $this->ala === 'all' ? null : (int) $this->ala;
+
+        return app(PainelQuery::class)->execute($alaId);
     }
 
-    public function tickClock(): void
+    public function onFilaAtualizada(): void
     {
-        $now = now();
-        $this->clock = $now->format('H:i:s');
-        $this->date = $now->locale('pt_BR')->translatedFormat('l, d \d\e F \d\e Y');
+        $this->refreshPainel();
+    }
+
+    public function onSenhaChamada(): void
+    {
+        $this->refreshPainel();
     }
 
     public function refreshPainel(): void
     {
-        $this->tickClock();
-
         unset($this->painelData);
-        $codigo = app(PainelQuery::class)->painelAtual()['codigo'];
+
+        $alaId = $this->ala === 'all' ? null : (int) $this->ala;
+        $codigo = app(PainelQuery::class)->painelAtual($alaId)['codigo'];
         if ($codigo !== $this->lastCodigo && $codigo !== '---') {
             $this->lastCodigo = $codigo;
             $this->dispatch('painel-alert');
         }
     }
 
-    public function updatedAla(string $ala): void
+    public function updatedAla(): void
     {
-        OperadorSessao::setPainelAla($ala);
-    }
-
-    #[Computed]
-    public function historicoFiltrado(): array
-    {
-        $historico = $this->painelData['historico'];
-
-        if ($this->ala === 'all') {
-            return $historico;
-        }
-
-        $alaId = (int) $this->ala;
-
-        return array_values(array_filter(
-            $historico,
-            fn (array $item) => ($item['alaId'] ?? null) === $alaId,
-        ));
+        OperadorSessao::setPainelAla($this->ala);
+        unset($this->painelData);
     }
 
     public function render()

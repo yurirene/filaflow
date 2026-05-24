@@ -25,7 +25,10 @@ return new class extends Migration
             $table->id();
             $table->string('nome', 100)->unique();
             $table->boolean('ativo')->default(true);
+            $table->boolean('is_consultorio')->default(false);
             $table->timestamps();
+
+            $table->index('is_consultorio', 'alas_is_consultorio_idx');
         });
 
         Schema::create('servicos', function (Blueprint $table) {
@@ -53,6 +56,18 @@ return new class extends Migration
             $table->index('status', 'operadores_status_idx');
         });
 
+        Schema::create('medicos', function (Blueprint $table) {
+            $table->id();
+            $table->string('nome', 150);
+            $table->string('cpf', 11)->unique();
+            $table->string('password');
+            $table->string('status', 20)->default('ativo');
+            $table->rememberToken();
+            $table->timestamps();
+
+            $table->index('status', 'medicos_status_idx');
+        });
+
         Schema::create('guiches', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ala_id')->constrained('alas')->restrictOnDelete();
@@ -68,8 +83,8 @@ return new class extends Migration
         Schema::create('consultorios', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ala_id')->constrained('alas')->restrictOnDelete();
+            $table->foreignId('medico_id')->nullable()->unique()->constrained('medicos')->nullOnDelete();
             $table->unsignedSmallInteger('numero');
-            $table->string('responsavel', 150);
             $table->boolean('ativo')->default(true);
             $table->timestamps();
 
@@ -101,6 +116,7 @@ return new class extends Migration
             $table->boolean('is_preferencial')->default(false);
             $table->boolean('is_agendado')->default(false);
             $table->string('status', 20)->default('aguardando');
+            $table->string('paciente_nome', 150)->nullable();
             $table->string('paciente_celular', 20)->nullable();
             $table->timestampTz('emitida_em');
             $table->timestampTz('chamada_em')->nullable();
@@ -123,7 +139,8 @@ return new class extends Migration
             $table->foreignId('senha_id')->constrained('senhas')->cascadeOnDelete();
             $table->foreignId('guiche_id')->nullable()->constrained('guiches')->nullOnDelete();
             $table->foreignId('consultorio_id')->nullable()->constrained('consultorios')->nullOnDelete();
-            $table->foreignId('operador_id')->constrained('operadores')->restrictOnDelete();
+            $table->foreignId('operador_id')->nullable()->constrained('operadores')->nullOnDelete();
+            $table->foreignId('medico_id')->nullable()->constrained('medicos')->nullOnDelete();
             $table->timestampTz('chamada_em');
             $table->unsignedSmallInteger('rechamada_vezes')->default(0);
 

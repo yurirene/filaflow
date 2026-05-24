@@ -3,16 +3,32 @@
     $empresa = $data['empresa'];
     $painelAtual = $data['painelAtual'];
 @endphp
-<div class="view active" wire:poll.5s="refreshPainel">
+<div class="view active">
+    <x-fila.echo-listener on-fila="onFilaAtualizada" on-senha="onSenhaChamada" />
     <div class="painel-container">
         <div class="painel-header">
             <div class="painel-brand">
                 <span class="painel-logo">⚕</span>
                 <span class="painel-clinic">{{ $empresa->nome }}</span>
             </div>
-            <div class="painel-clock-area">
-                <div class="painel-clock">{{ $clock }}</div>
-                <div class="painel-date">{{ $date }}</div>
+            <div
+                class="painel-clock-area"
+                x-data="{
+                    clock: '--:--:--',
+                    date: '',
+                    tick() {
+                        const now = new Date();
+                        this.clock = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        this.date = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                    },
+                    init() {
+                        this.tick();
+                        setInterval(() => this.tick(), 1000);
+                    },
+                }"
+            >
+                <div class="painel-clock" x-text="clock"></div>
+                <div class="painel-date" x-text="date"></div>
             </div>
             <div class="painel-selector">
                 <label>{{ __('Ala') }}:</label>
@@ -42,13 +58,16 @@
                     </span>
                     <span class="guiche-number">{{ $painelAtual['local'] ?? ($painelAtual['guiche'] ?? '--') }}</span>
                 </div>
+                @if ($painelAtual['tipo'] === 'consultorio')
+                    <div class="painel-current-service">{{ $painelAtual['paciente'] }}</div>
+                @endif
                 <div class="painel-alert-ring" x-ref="ring"></div>
             </div>
 
             <div class="painel-history">
                 <div class="painel-history-title">{{ __('ÚLTIMAS CHAMADAS') }}</div>
                 <div class="painel-history-list">
-                    @forelse (array_slice($this->historicoFiltrado, 0, 8) as $idx => $item)
+                    @forelse (array_slice($data['historico'], 0, 8) as $idx => $item)
                         <div class="history-item {{ $idx === 0 ? 'first' : '' }}" wire:key="hist-{{ $item['codigo'] }}-{{ $item['hora'] }}">
                             <span class="history-num">{{ $item['codigo'] }}</span>
                             <div class="history-info">
@@ -71,16 +90,13 @@
             @foreach ($data['servicos'] as $svc)
                 @php
                     $resumo = $data['filasResumo'][$svc->id] ?? ['tamanho' => 0, 'esperaMin' => 1];
-                    $hidden = $ala !== 'all' && (int) $ala !== $svc->ala_id;
                 @endphp
-                @if (! $hidden)
-                    <div class="painel-queue-card" wire:key="queue-{{ $svc->id }}">
-                        <div class="queue-card-title">{{ $svc->nome }}</div>
-                        <div class="queue-card-count">{{ $resumo['tamanho'] }}</div>
-                        <div class="queue-card-label">{{ __('na fila') }}</div>
-                        <div class="queue-card-wait">~{{ $resumo['esperaMin'] }} min</div>
-                    </div>
-                @endif
+                <div class="painel-queue-card" wire:key="queue-{{ $svc->id }}">
+                    <div class="queue-card-title">{{ $svc->nome }}</div>
+                    <div class="queue-card-count">{{ $resumo['tamanho'] }}</div>
+                    <div class="queue-card-label">{{ __('na fila') }}</div>
+                    <div class="queue-card-wait">~{{ $resumo['esperaMin'] }} min</div>
+                </div>
             @endforeach
         </div>
 
